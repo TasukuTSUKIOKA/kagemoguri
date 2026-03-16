@@ -433,8 +433,10 @@ body::before {
   }
 
   .message {
-    inset: auto 6px 6px 6px;
+    inset: 6px 6px auto 6px;
     max-width: none;
+    max-height: calc(100% - 12px);
+    overflow-y: auto;
   }
 
   .share-preview {
