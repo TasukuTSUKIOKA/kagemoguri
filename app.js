@@ -620,6 +620,10 @@ function isPlayerInLight() {
   return lights.some((light) => isPlayerInLightForLight(light));
 }
 
+function getLightHitCount() {
+  return lights.filter((light) => isPlayerInLightForLight(light)).length;
+}
+
 function isPlayerBehindPillar(light) {
   const playerCenterX = player.x + player.width / 2;
   const playerCenterY = player.y + player.height / 2;
@@ -708,7 +712,8 @@ function updateLights(deltaTime) {
     }
 
     if (game.time > 8) {
-      light.speed = 140 + index * 24 + game.time * 1.35;
+      const speedTime = Math.min(game.time, 180);
+      light.speed = 140 + index * 24 + speedTime * 1.1;
     }
   });
 }
@@ -745,7 +750,8 @@ function updatePlayer(deltaTime) {
 }
 
 function updateExposure(deltaTime) {
-  const inLight = isPlayerInLight();
+  const hitCount = getLightHitCount();
+  const inLight = hitCount > 0;
   const hidden = inLight && isPlayerHidden();
 
   let recovery = 18;
@@ -761,7 +767,8 @@ function updateExposure(deltaTime) {
   if (smoke.active) {
     game.exposure -= 58 * deltaTime;
   } else if (inLight && !hidden) {
-    game.exposure += 30 * deltaTime;
+    const exposureRate = 30 + Math.max(0, hitCount - 1) * 12;
+    game.exposure += exposureRate * deltaTime;
   } else {
     game.exposure -= recovery * deltaTime;
   }
