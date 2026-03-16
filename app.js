@@ -20,7 +20,7 @@ const locales = {
     title: "影もぐり",
     eyebrow: "hide in the shadows",
     lead: "光を避けて、影へもぐれ。 見つかりそうになったら煙幕で立て直せ。",
-    score_label: "score",
+    score_label: "スコア",
     danger_label: "見つかりそう",
     smoke_button: "煙幕",
     tip_move: "移動: ← → / A D / 画面ボタン",
@@ -38,16 +38,17 @@ const locales = {
     message_paused_title: "停止中",
     message_paused_text: "Spaceで戻る",
     message_gameover_title: "見つかった。",
-    message_gameover_text: "score {score} 秒 survived. Spaceでやり直し",
+    message_gameover_text: "スコア {score}。Spaceまたは再挑戦ボタンでやり直し",
     page_title: "影もぐり",
     sound_on: "Sound On",
     sound_off: "Sound Off",
+    score_unit: "秒",
   },
   en: {
     title: "Kagemoguri",
     eyebrow: "hide in the shadows",
     lead: "Dodge the light and slip into the shadows. If you are about to be seen, recover with smoke.",
-    score_label: "score",
+    score_label: "Score",
     danger_label: "spotted soon",
     smoke_button: "Smoke",
     tip_move: "Move: ← → / A D / on-screen buttons",
@@ -65,10 +66,11 @@ const locales = {
     message_paused_title: "paused",
     message_paused_text: "Press Space to return",
     message_gameover_title: "spotted.",
-    message_gameover_text: "score {score} sec. Press Space to retry",
+    message_gameover_text: "Score {score}. Press Space or Retry to try again",
     page_title: "Kagemoguri",
     sound_on: "Sound On",
     sound_off: "Sound Off",
+    score_unit: "sec",
   },
 };
 
@@ -312,6 +314,11 @@ function t(key, params = {}) {
   return text;
 }
 
+function formatScore(value) {
+  const score = value.toFixed(1);
+  return `${score} ${t("score_unit")}`;
+}
+
 function setLocale(locale) {
   game.locale = locale;
   document.documentElement.lang = locale;
@@ -439,7 +446,7 @@ function syncMessageByState() {
   if (game.state === "gameover") {
     setMessage(
       t("message_gameover_title"),
-      t("message_gameover_text", { score: game.score.toFixed(1) })
+      t("message_gameover_text", { score: formatScore(game.score) })
     );
   }
 }
@@ -484,7 +491,7 @@ function updateHud() {
       ? t("smoke_cooldown", { time: smoke.cooldownLeft.toFixed(1) })
       : t("smoke_ready");
 
-  scoreEl.textContent = game.score.toFixed(1);
+  scoreEl.textContent = formatScore(game.score);
   smokeStatusEl.textContent = smokeLabel;
   exposureFillEl.style.width = `${(game.exposure / game.maxExposure) * 100}%`;
   updateToggleButton();
@@ -714,7 +721,6 @@ function drawPillars() {
 function drawLight(light) {
   const bottomY = canvas.height;
   const halfWidth = getBeamHalfWidth(light, bottomY);
-
   const gradient = ctx.createLinearGradient(light.x, light.y, light.x, bottomY);
   gradient.addColorStop(0, "rgba(255, 255, 255, 0.36)");
   gradient.addColorStop(0.35, "rgba(255, 255, 255, 0.18)");
@@ -743,32 +749,33 @@ function drawLights() {
 }
 
 function drawShadowHints() {
+  ctx.save();
+  ctx.filter = "blur(10px)";
+
   lights.forEach((light) => {
     pillars.forEach((pillar) => {
       const leftX = pillar.x;
       const rightX = pillar.x + pillar.width;
       const bottomY = canvas.height;
       const extend = 9;
+      const maxOffset = 260;
+      const rawShadowLeftX = leftX + (leftX - light.x) * extend;
+      const rawShadowRightX = rightX + (rightX - light.x) * extend;
+      const shadowLeftX = leftX + clamp(rawShadowLeftX - leftX, -maxOffset, maxOffset);
+      const shadowRightX = rightX + clamp(rawShadowRightX - rightX, -maxOffset, maxOffset);
 
-      ctx.fillStyle = "rgba(0, 0, 0, 0.58)";
+      ctx.fillStyle = "rgba(0, 0, 0, 0.68)";
       ctx.beginPath();
       ctx.moveTo(leftX, pillar.top);
       ctx.lineTo(rightX, pillar.top);
-      ctx.lineTo(rightX + (rightX - light.x) * extend, bottomY);
-      ctx.lineTo(leftX + (leftX - light.x) * extend, bottomY);
+      ctx.lineTo(shadowRightX, bottomY);
+      ctx.lineTo(shadowLeftX, bottomY);
       ctx.closePath();
       ctx.fill();
-
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(leftX, pillar.top);
-      ctx.lineTo(leftX + (leftX - light.x) * extend, bottomY);
-      ctx.moveTo(rightX, pillar.top);
-      ctx.lineTo(rightX + (rightX - light.x) * extend, bottomY);
-      ctx.stroke();
     });
   });
+
+  ctx.restore();
 }
 
 function drawSmoke() {
