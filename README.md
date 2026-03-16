@@ -1,24 +1,31 @@
 # 影もぐり / Kagemoguri
 
-光を避けて、影へもぐるブラウザゲーム。  
-見つかりそうになったら煙幕で立て直しながら、生き残った時間を競う。
+迫るサーチライトを避けながら、影へもぐれ。  
+見つかりそうになったら煙幕で切り抜けろ。
 
-## Play
+Stay in the shadows while avoiding the sweeping searchlights.  
+If you're about to be spotted, use a smoke screen to make your escape.
 
-GitHub Pages で公開予定
+## Play / プレイ
 
-## Controls
+https://tasukutsukioka.github.io/kagemoguri/
 
-- Move: `←` `→` / `A` `D` / on-screen buttons
-- Smoke: `Shift` / smoke button
-- Start / Pause / Resume / Retry: `Space` / start button
+## Play Screen / プレイ画面
 
-## Language
+![Kagemoguri gameplay screen](./assets/screenshot.png)
 
-- Japanese
-- English
+## Controls / 操作
 
-## Tech
+- Move / 移動: `←` `→` / `A` `D` / on-screen buttons
+- Smoke Screen / 煙幕: `Shift` / smoke button
+- Start / Pause / Resume / Retry / 開始・一時停止・再開・リトライ: `Space` / start button
+
+## Language / 言語
+
+- Japanese / 日本語
+- English / 英語
+
+## Tech / 技術
 
 - HTML
 - CSS
@@ -28,5 +35,5 @@ GitHub Pages で公開予定
 
 - Game, design, implementation / ゲーム制作・デザイン・実装: Tasuku TSUKIOKA
 - Development assistance / 開発補助: OpenAI Codex
-- BGM / BGM: generated with Google Gemini
+- BGM: generated with Google Gemini
 - Sound effects / 効果音: generated with ElevenLabs (`elevenlabs.io`)
