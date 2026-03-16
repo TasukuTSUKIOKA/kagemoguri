@@ -20,6 +20,8 @@ const soundChoiceButtons = document.querySelectorAll("[data-sound-choice]");
 const soundModalEl = document.getElementById("sound-modal");
 const i18nNodes = document.querySelectorAll("[data-i18n]");
 
+const GAME_VERSION = "1.1";
+
 const locales = {
   ja: {
     title: "影もぐり",
@@ -333,7 +335,9 @@ function formatScore(value) {
 }
 
 function buildShareText() {
-  return t("share_text", { score: formatScore(game.score) });
+  return `Version ${GAME_VERSION} | ${t("share_text", {
+    score: formatScore(game.score),
+  })}`;
 }
 
 function buildSharePayload() {
