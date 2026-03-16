@@ -335,7 +335,7 @@ function formatScore(value) {
 }
 
 function buildShareText() {
-  return `Version ${GAME_VERSION} | ${t("share_text", {
+  return `Version ${GAME_VERSION} ${t("share_text", {
     score: formatScore(game.score),
   })}`;
 }
