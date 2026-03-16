@@ -7,6 +7,11 @@ const exposureFillEl = document.getElementById("exposure-fill");
 const messageEl = document.getElementById("message");
 const messageTitleEl = messageEl.querySelector(".message-title");
 const messageTextEl = messageEl.querySelector(".message-text");
+const sharePanel = document.getElementById("share-panel");
+const sharePreview = document.getElementById("share-preview");
+const shareFeedback = document.getElementById("share-feedback");
+const shareXButton = document.getElementById("share-x-button");
+const shareCopyButton = document.getElementById("share-copy-button");
 const controlButtons = document.querySelectorAll(".control-button");
 const toggleButton = document.querySelector('[data-control="toggle"]');
 const localeButtons = document.querySelectorAll(".locale-button");
@@ -43,6 +48,10 @@ const locales = {
     sound_on: "Sound On",
     sound_off: "Sound Off",
     score_unit: "秒",
+    share_text: "『影もぐり』で {score} 隠れることに成功！",
+    share_x: "Xでシェア",
+    share_copy: "コピー",
+    share_copied: "結果をコピーした",
   },
   en: {
     title: "Kagemoguri",
@@ -71,6 +80,10 @@ const locales = {
     sound_on: "Sound On",
     sound_off: "Sound Off",
     score_unit: "sec",
+    share_text: "I stayed hidden for {score} in Kagemoguri!",
+    share_x: "Share on X",
+    share_copy: "Copy",
+    share_copied: "Result copied",
   },
 };
 
@@ -319,6 +332,76 @@ function formatScore(value) {
   return `${score} ${t("score_unit")}`;
 }
 
+function buildShareText() {
+  return t("share_text", { score: formatScore(game.score) });
+}
+
+function buildSharePayload() {
+  const shareText = `${buildShareText()}\n${window.location.href}`;
+  const xText = `${buildShareText()}\n#影もぐり @TasukuTSUKIOKA`;
+
+  return {
+    text: shareText,
+    xText,
+    url: window.location.href,
+  };
+}
+
+function setShareFeedback(text = "") {
+  if (!shareFeedback) {
+    return;
+  }
+
+  shareFeedback.textContent = text;
+  shareFeedback.hidden = !text;
+}
+
+function updateSharePanel() {
+  if (!sharePanel || !sharePreview || !shareXButton || !shareCopyButton) {
+    return;
+  }
+
+  const isGameOver = game.state === "gameover";
+  sharePanel.hidden = !isGameOver;
+
+  if (!isGameOver) {
+    sharePreview.textContent = "";
+    setShareFeedback();
+    shareXButton.href = "https://x.com/intent/post";
+    return;
+  }
+
+  const payload = buildSharePayload();
+  sharePreview.textContent = payload.text;
+  setShareFeedback();
+  shareXButton.textContent = t("share_x");
+  shareCopyButton.textContent = t("share_copy");
+
+  const url = new URL("https://x.com/intent/post");
+  url.searchParams.set("text", payload.xText);
+  url.searchParams.set("url", payload.url);
+  shareXButton.href = url.toString();
+}
+
+async function handleCopyShare() {
+  if (game.state !== "gameover") {
+    return;
+  }
+
+  const payload = buildSharePayload();
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(payload.text);
+      const copiedText = t("share_copied");
+      smokeStatusEl.textContent = copiedText;
+      setShareFeedback(copiedText);
+      return;
+    } catch {}
+  }
+
+  window.prompt("Copy this text", payload.text);
+}
+
 function setLocale(locale) {
   game.locale = locale;
   document.documentElement.lang = locale;
@@ -335,6 +418,7 @@ function setLocale(locale) {
   updateSoundButtons();
   syncMessageByState();
   updateHud();
+  updateSharePanel();
 }
 
 function createLight(x, y, spread, speed, direction) {
@@ -367,7 +451,6 @@ function resetGame() {
 
   syncMessageByState();
   updateHud();
-  updateToggleButton();
 }
 
 function startGame() {
@@ -393,7 +476,6 @@ function startGame() {
 
   hideMessage();
   updateHud();
-  updateToggleButton();
   playSound("start");
   playBgm();
 }
@@ -406,7 +488,7 @@ function pauseGame() {
   game.state = "paused";
   pauseBgm();
   syncMessageByState();
-  updateToggleButton();
+  updateHud();
 }
 
 function resumeGame() {
@@ -420,7 +502,7 @@ function resumeGame() {
 
   game.state = "playing";
   hideMessage();
-  updateToggleButton();
+  updateHud();
   resumeBgm();
 }
 
@@ -428,7 +510,7 @@ function endGame() {
   game.state = "gameover";
   pauseBgm();
   syncMessageByState();
-  updateToggleButton();
+  updateHud();
   playSound("gameover");
 }
 
@@ -495,6 +577,7 @@ function updateHud() {
   smokeStatusEl.textContent = smokeLabel;
   exposureFillEl.style.width = `${(game.exposure / game.maxExposure) * 100}%`;
   updateToggleButton();
+  updateSharePanel();
 }
 
 function clamp(value, min, max) {
@@ -985,6 +1068,12 @@ soundChoiceButtons.forEach((button) => {
     confirmSoundChoice(enabled);
   });
 });
+
+if (shareCopyButton) {
+  shareCopyButton.addEventListener("click", () => {
+    handleCopyShare();
+  });
+}
 
 resetGame();
 setLocale("ja");
