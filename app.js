@@ -20,7 +20,7 @@ const soundChoiceButtons = document.querySelectorAll("[data-sound-choice]");
 const soundModalEl = document.getElementById("sound-modal");
 const i18nNodes = document.querySelectorAll("[data-i18n]");
 
-const GAME_VERSION = "1.1";
+const GAME_VERSION = "1.1.0";
 
 const locales = {
   ja: {
