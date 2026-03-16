@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>影もぐり</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <div
+      id="sound-modal"
+      class="sound-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="sound-modal-title"
+    >
+      <div class="sound-modal-panel">
+        <p id="sound-modal-title" class="sound-modal-title">音をつける？ / Sound on?</p>
+        <p class="sound-modal-text">
+          ここで音のあり・なしを選べる。あとから右上でも変えられる。<br />
+          Choose sound on or off here. You can change it later in the top right.
+        </p>
+        <div class="sound-modal-actions">
+          <button type="button" class="sound-modal-button" data-sound-choice="on">
+            音あり / Sound On
+          </button>
+          <button type="button" class="sound-modal-button" data-sound-choice="off">
+            音なし / Sound Off
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <main class="layout">
+      <header class="hero">
+        <div class="hero-top">
+          <p class="eyebrow" data-i18n="eyebrow">hide in the shadow</p>
+          <div class="hero-actions">
+            <div class="sound-switch" aria-label="sound switch">
+              <button type="button" class="sound-button is-active" data-sound="on">Sound On</button>
+              <button type="button" class="sound-button" data-sound="off">Sound Off</button>
+            </div>
+            <div class="locale-switch" aria-label="language switch">
+              <button type="button" class="locale-button is-active" data-locale="ja">JP</button>
+              <button type="button" class="locale-button" data-locale="en">EN</button>
+            </div>
+          </div>
+        </div>
+        <h1 data-i18n="title">影もぐり</h1>
+        <p class="lead" data-i18n="lead">
+          光を避けて、影へもぐれ。 見つかりそうになったら煙幕で立て直せ。
+        </p>
+      </header>
+
+      <section class="hud" aria-label="ゲーム情報">
+        <div class="panel">
+          <span class="label" data-i18n="score_label">score</span>
+          <strong id="score">0.0</strong>
+          <p id="smoke-status" class="sub-status">煙幕 準備完了</p>
+        </div>
+        <div class="panel">
+          <span class="label" data-i18n="danger_label">見つかりそう</span>
+          <div class="meter" aria-hidden="true">
+            <div id="exposure-fill" class="meter-fill"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="game-shell">
+        <div class="frame">
+          <canvas
+            id="game"
+            width="960"
+            height="540"
+            aria-label="光を避けて影に隠れるゲーム画面"
+          ></canvas>
+
+          <div id="message" class="message">
+            <p class="message-title">press space</p>
+            <p class="message-text">
+              左右に動いて影へ。 光に当たり続けるとゲームオーバー。
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="controls" aria-label="画面内操作">
+        <button type="button" class="control-button" data-control="left" aria-label="左へ移動">◀</button>
+        <button type="button" class="control-button" data-control="right" aria-label="右へ移動">▶</button>
+        <button type="button" class="control-button" data-control="smoke" data-i18n="smoke_button">煙幕</button>
+        <button type="button" class="control-button" data-control="toggle">開始</button>
+      </section>
+
+      <footer class="tips">
+        <p data-i18n="tip_move">移動: ← → / A D / 画面ボタン</p>
+        <p data-i18n="tip_smoke">煙幕: Shift / 煙幕ボタン</p>
+        <p data-i18n="tip_toggle">開始・停止・再開・リトライ: Space / 開始ボタン</p>
+      </footer>
+
+      <p class="credit-line">Created by Tasuku TSUKIOKA / 制作: Tasuku TSUKIOKA</p>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

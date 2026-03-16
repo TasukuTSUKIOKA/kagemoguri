@@ -1,0 +1,986 @@
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const scoreEl = document.getElementById("score");
+const smokeStatusEl = document.getElementById("smoke-status");
+const exposureFillEl = document.getElementById("exposure-fill");
+const messageEl = document.getElementById("message");
+const messageTitleEl = messageEl.querySelector(".message-title");
+const messageTextEl = messageEl.querySelector(".message-text");
+const controlButtons = document.querySelectorAll(".control-button");
+const toggleButton = document.querySelector('[data-control="toggle"]');
+const localeButtons = document.querySelectorAll(".locale-button");
+const soundButtons = document.querySelectorAll(".sound-button");
+const soundChoiceButtons = document.querySelectorAll("[data-sound-choice]");
+const soundModalEl = document.getElementById("sound-modal");
+const i18nNodes = document.querySelectorAll("[data-i18n]");
+
+const locales = {
+  ja: {
+    title: "影もぐり",
+    eyebrow: "hide in the shadow",
+    lead: "光を避けて、影へもぐれ。 見つかりそうになったら煙幕で立て直せ。",
+    score_label: "score",
+    danger_label: "見つかりそう",
+    smoke_button: "煙幕",
+    tip_move: "移動: ← → / A D / 画面ボタン",
+    tip_smoke: "煙幕: Shift / 煙幕ボタン",
+    tip_toggle: "開始・停止・再開・リトライ: Space / 開始ボタン",
+    smoke_ready: "煙幕 準備完了",
+    smoke_cooldown: "煙幕 {time}",
+    smoke_active: "煙幕 {time}",
+    toggle_idle: "開始",
+    toggle_playing: "停止",
+    toggle_paused: "再開",
+    toggle_gameover: "再挑戦",
+    message_idle_title: "press space",
+    message_idle_text: "影へもぐれ。見つかりそうなら煙幕。",
+    message_paused_title: "停止中",
+    message_paused_text: "Spaceで戻る",
+    message_gameover_title: "見つかった。",
+    message_gameover_text: "score {score} 秒 survived. Spaceでやり直し",
+    page_title: "影もぐり",
+    sound_on: "Sound On",
+    sound_off: "Sound Off",
+  },
+  en: {
+    title: "Kagemoguri",
+    eyebrow: "hide in the shadow",
+    lead: "Dodge the light and slip into shadow. If you are about to be seen, recover with smoke.",
+    score_label: "score",
+    danger_label: "spotted soon",
+    smoke_button: "Smoke",
+    tip_move: "Move: ← → / A D / on-screen buttons",
+    tip_smoke: "Smoke: Shift / smoke button",
+    tip_toggle: "Start / pause / resume / retry: Space / start button",
+    smoke_ready: "Smoke Ready",
+    smoke_cooldown: "Smoke {time}",
+    smoke_active: "Smoke {time}",
+    toggle_idle: "Start",
+    toggle_playing: "Pause",
+    toggle_paused: "Resume",
+    toggle_gameover: "Retry",
+    message_idle_title: "press space",
+    message_idle_text: "Hide in shadow. Use smoke if you are about to be seen.",
+    message_paused_title: "paused",
+    message_paused_text: "Press Space to return",
+    message_gameover_title: "spotted.",
+    message_gameover_text: "score {score} sec. Press Space to retry",
+    page_title: "Kagemoguri",
+    sound_on: "Sound On",
+    sound_off: "Sound Off",
+  },
+};
+
+const keys = {
+  left: false,
+  right: false,
+};
+
+const game = {
+  width: canvas.width,
+  height: canvas.height,
+  state: "idle",
+  time: 0,
+  exposure: 0,
+  maxExposure: 100,
+  score: 0,
+  gameOverFade: 0,
+  locale: "ja",
+  soundEnabled: true,
+  soundChoiceDone: false,
+};
+
+const smoke = {
+  active: false,
+  activeTime: 0,
+  duration: 2.5,
+  cooldown: 18,
+  cooldownLeft: 0,
+};
+
+const player = {
+  width: 34,
+  height: 44,
+  x: canvas.width / 2 - 17,
+  y: canvas.height - 76,
+  speed: 320,
+};
+
+const pillars = [
+  { x: 150, width: 60, top: 150 },
+  { x: 430, width: 72, top: 220 },
+  { x: 740, width: 56, top: 180 },
+];
+
+const lights = [
+  {
+    x: 180,
+    y: 70,
+    spread: 72,
+    speed: 140,
+    direction: 1,
+  },
+];
+
+const audioState = {
+  enabled: false,
+  lastAlertAt: 0,
+};
+
+const sounds = {
+  start: createAudio("sounds/start.mp3", 0.65),
+  smoke: createAudio("sounds/smoke.mp3", 0.75),
+  alert: createAudio("sounds/alert.mp3", 0.45),
+  gameover: createAudio("sounds/gameover.mp3", 0.8),
+  bgm: createAudio("sounds/bgm.mp3", 0.35, true),
+};
+
+function createAudio(src, volume, loop = false) {
+  const audio = new Audio(src);
+  audio.preload = "auto";
+  audio.volume = volume;
+  audio.loop = loop;
+  audio.dataset.loaded = "unknown";
+
+  audio.addEventListener("canplaythrough", () => {
+    audio.dataset.loaded = "ready";
+  });
+
+  audio.addEventListener("error", () => {
+    audio.dataset.loaded = "error";
+  });
+
+  return audio;
+}
+
+function markAudioEnabled() {
+  audioState.enabled = true;
+}
+
+function showSoundModal() {
+  soundModalEl.hidden = false;
+}
+
+function hideSoundModal() {
+  soundModalEl.hidden = true;
+}
+
+function updateSoundButtons() {
+  soundButtons.forEach((button) => {
+    const isOn = button.dataset.sound === "on";
+    button.classList.toggle("is-active", game.soundEnabled === isOn);
+    button.textContent = isOn ? t("sound_on") : t("sound_off");
+  });
+}
+
+function setSoundEnabled(enabled) {
+  game.soundEnabled = enabled;
+
+  if (!enabled) {
+    pauseBgm();
+  } else if (game.state === "playing") {
+    markAudioEnabled();
+    resumeBgm();
+  }
+
+  updateSoundButtons();
+}
+
+function confirmSoundChoice(enabled) {
+  game.soundChoiceDone = true;
+  setSoundEnabled(enabled);
+
+  if (enabled) {
+    markAudioEnabled();
+  }
+
+  hideSoundModal();
+}
+
+function playSound(name) {
+  if (!audioState.enabled || !game.soundEnabled) {
+    return;
+  }
+
+  const audio = sounds[name];
+
+  if (!audio || audio.dataset.loaded === "error") {
+    return;
+  }
+
+  try {
+    audio.currentTime = 0;
+  } catch {
+    return;
+  }
+
+  const playPromise = audio.play();
+
+  if (playPromise && typeof playPromise.catch === "function") {
+    playPromise.catch(() => {});
+  }
+}
+
+function playBgm() {
+  if (!audioState.enabled || !game.soundEnabled) {
+    return;
+  }
+
+  const bgm = sounds.bgm;
+
+  if (!bgm || bgm.dataset.loaded === "error") {
+    return;
+  }
+
+  const playPromise = bgm.play();
+
+  if (playPromise && typeof playPromise.catch === "function") {
+    playPromise.catch(() => {});
+  }
+}
+
+function stopBgm() {
+  const bgm = sounds.bgm;
+
+  if (!bgm) {
+    return;
+  }
+
+  bgm.pause();
+
+  try {
+    bgm.currentTime = 0;
+  } catch {
+    return;
+  }
+}
+
+function pauseBgm() {
+  const bgm = sounds.bgm;
+
+  if (!bgm) {
+    return;
+  }
+
+  bgm.pause();
+}
+
+function resumeBgm() {
+  if (!audioState.enabled || !game.soundEnabled) {
+    return;
+  }
+
+  const bgm = sounds.bgm;
+
+  if (!bgm || bgm.dataset.loaded === "error") {
+    return;
+  }
+
+  const playPromise = bgm.play();
+
+  if (playPromise && typeof playPromise.catch === "function") {
+    playPromise.catch(() => {});
+  }
+}
+
+function maybePlayAlert() {
+  if (!audioState.enabled || !game.soundEnabled || smoke.active) {
+    return;
+  }
+
+  if (game.exposure < 72) {
+    return;
+  }
+
+  if (game.time - audioState.lastAlertAt < 1.1) {
+    return;
+  }
+
+  audioState.lastAlertAt = game.time;
+  playSound("alert");
+}
+
+function t(key, params = {}) {
+  const table = locales[game.locale];
+  let text = table[key] ?? "";
+
+  Object.entries(params).forEach(([name, value]) => {
+    text = text.replace(`{${name}}`, value);
+  });
+
+  return text;
+}
+
+function setLocale(locale) {
+  game.locale = locale;
+  document.documentElement.lang = locale;
+  document.title = t("page_title");
+
+  i18nNodes.forEach((node) => {
+    node.textContent = t(node.dataset.i18n);
+  });
+
+  localeButtons.forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.locale === locale);
+  });
+
+  updateSoundButtons();
+  syncMessageByState();
+  updateHud();
+}
+
+function createLight(x, y, spread, speed, direction) {
+  return { x, y, spread, speed, direction };
+}
+
+function resetLights() {
+  lights.length = 0;
+  lights.push(createLight(180, 70, 72, 140, 1));
+}
+
+function resetSmoke() {
+  smoke.active = false;
+  smoke.activeTime = 0;
+  smoke.cooldownLeft = 0;
+}
+
+function resetGame() {
+  game.state = "idle";
+  game.time = 0;
+  game.exposure = 0;
+  game.score = 0;
+  game.gameOverFade = 0;
+  audioState.lastAlertAt = 0;
+
+  player.x = canvas.width / 2 - player.width / 2;
+  resetLights();
+  resetSmoke();
+  stopBgm();
+
+  syncMessageByState();
+  updateHud();
+  updateToggleButton();
+}
+
+function startGame() {
+  if (!game.soundChoiceDone) {
+    showSoundModal();
+    return;
+  }
+
+  if (game.soundEnabled) {
+    markAudioEnabled();
+  }
+
+  game.state = "playing";
+  game.time = 0;
+  game.exposure = 0;
+  game.score = 0;
+  game.gameOverFade = 0;
+  audioState.lastAlertAt = 0;
+
+  player.x = canvas.width / 2 - player.width / 2;
+  resetLights();
+  resetSmoke();
+
+  hideMessage();
+  updateHud();
+  updateToggleButton();
+  playSound("start");
+  playBgm();
+}
+
+function pauseGame() {
+  if (game.state !== "playing") {
+    return;
+  }
+
+  game.state = "paused";
+  pauseBgm();
+  syncMessageByState();
+  updateToggleButton();
+}
+
+function resumeGame() {
+  if (game.state !== "paused") {
+    return;
+  }
+
+  if (game.soundEnabled) {
+    markAudioEnabled();
+  }
+
+  game.state = "playing";
+  hideMessage();
+  updateToggleButton();
+  resumeBgm();
+}
+
+function endGame() {
+  game.state = "gameover";
+  pauseBgm();
+  syncMessageByState();
+  updateToggleButton();
+  playSound("gameover");
+}
+
+function syncMessageByState() {
+  if (game.state === "idle") {
+    setMessage(t("message_idle_title"), t("message_idle_text"));
+    return;
+  }
+
+  if (game.state === "paused") {
+    setMessage(t("message_paused_title"), t("message_paused_text"));
+    return;
+  }
+
+  if (game.state === "gameover") {
+    setMessage(
+      t("message_gameover_title"),
+      t("message_gameover_text", { score: game.score.toFixed(1) })
+    );
+  }
+}
+
+function setMessage(title, text) {
+  messageTitleEl.textContent = title;
+  messageTextEl.textContent = text;
+  messageEl.hidden = false;
+}
+
+function hideMessage() {
+  messageEl.hidden = true;
+}
+
+function updateToggleButton() {
+  if (!toggleButton) {
+    return;
+  }
+
+  if (game.state === "idle") {
+    toggleButton.textContent = t("toggle_idle");
+    return;
+  }
+
+  if (game.state === "playing") {
+    toggleButton.textContent = t("toggle_playing");
+    return;
+  }
+
+  if (game.state === "paused") {
+    toggleButton.textContent = t("toggle_paused");
+    return;
+  }
+
+  toggleButton.textContent = t("toggle_gameover");
+}
+
+function updateHud() {
+  const smokeLabel = smoke.active
+    ? t("smoke_active", { time: smoke.activeTime.toFixed(1) })
+    : smoke.cooldownLeft > 0
+      ? t("smoke_cooldown", { time: smoke.cooldownLeft.toFixed(1) })
+      : t("smoke_ready");
+
+  scoreEl.textContent = game.score.toFixed(1);
+  smokeStatusEl.textContent = smokeLabel;
+  exposureFillEl.style.width = `${(game.exposure / game.maxExposure) * 100}%`;
+  updateToggleButton();
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function getBeamHalfWidth(light, y) {
+  const depth = Math.max(y - light.y, 0);
+  return 18 + depth * 0.2 + light.spread;
+}
+
+function isPlayerInLightForLight(light) {
+  const playerCenterX = player.x + player.width / 2;
+  const playerTop = player.y;
+  const playerBottom = player.y + player.height;
+
+  if (playerBottom <= light.y) {
+    return false;
+  }
+
+  const sampleY = (playerTop + playerBottom) / 2;
+  const beamHalfWidth = getBeamHalfWidth(light, sampleY);
+
+  return Math.abs(playerCenterX - light.x) <= beamHalfWidth;
+}
+
+function isPlayerInLight() {
+  return lights.some((light) => isPlayerInLightForLight(light));
+}
+
+function isPlayerBehindPillar(light) {
+  const playerCenterX = player.x + player.width / 2;
+  const playerCenterY = player.y + player.height / 2;
+
+  if (playerCenterY <= light.y) {
+    return false;
+  }
+
+  return pillars.some((pillar) => {
+    const pillarCenterX = pillar.x + pillar.width / 2;
+    const lightSide = playerCenterX - light.x;
+    const pillarSide = pillarCenterX - light.x;
+
+    if (lightSide === 0) {
+      return Math.abs(playerCenterX - pillarCenterX) < pillar.width / 2;
+    }
+
+    if (lightSide * pillarSide <= 0) {
+      return false;
+    }
+
+    if (Math.abs(pillarCenterX - light.x) >= Math.abs(playerCenterX - light.x)) {
+      return false;
+    }
+
+    const tLine = (pillar.top - light.y) / (playerCenterY - light.y);
+    const shadowX = light.x + (playerCenterX - light.x) * tLine;
+
+    return shadowX >= pillar.x && shadowX <= pillar.x + pillar.width;
+  });
+}
+
+function isPlayerHidden() {
+  return lights.some((light) => {
+    return isPlayerInLightForLight(light) && isPlayerBehindPillar(light);
+  });
+}
+
+function useSmoke() {
+  if (game.state !== "playing") {
+    return;
+  }
+
+  if (smoke.active || smoke.cooldownLeft > 0) {
+    return;
+  }
+
+  if (game.soundEnabled) {
+    markAudioEnabled();
+  }
+
+  smoke.active = true;
+  smoke.activeTime = smoke.duration;
+  smoke.cooldownLeft = smoke.cooldown;
+  updateHud();
+  playSound("smoke");
+}
+
+function addLightIfNeeded() {
+  if (game.time < 12 || lights.length >= 3) {
+    return;
+  }
+
+  if (lights.length === 1) {
+    lights.push(createLight(780, 90, 58, 175, -1));
+  } else if (game.time > 32 && lights.length === 2) {
+    lights.push(createLight(480, 60, 46, 180, 1));
+  }
+}
+
+function updateLights(deltaTime) {
+  lights.forEach((light, index) => {
+    light.x += light.speed * light.direction * deltaTime;
+
+    const leftEdge = 40;
+    const rightEdge = canvas.width - 40;
+
+    if (light.x <= leftEdge) {
+      light.x = leftEdge;
+      light.direction = 1;
+    }
+
+    if (light.x >= rightEdge) {
+      light.x = rightEdge;
+      light.direction = -1;
+    }
+
+    if (game.time > 8) {
+      light.speed = 140 + index * 24 + game.time * 1.35;
+    }
+  });
+}
+
+function updateSmoke(deltaTime) {
+  if (smoke.active) {
+    smoke.activeTime -= deltaTime;
+
+    if (smoke.activeTime <= 0) {
+      smoke.active = false;
+      smoke.activeTime = 0;
+    }
+  }
+
+  if (smoke.cooldownLeft > 0) {
+    smoke.cooldownLeft -= deltaTime;
+    smoke.cooldownLeft = Math.max(smoke.cooldownLeft, 0);
+  }
+}
+
+function updatePlayer(deltaTime) {
+  let move = 0;
+
+  if (keys.left) {
+    move -= 1;
+  }
+
+  if (keys.right) {
+    move += 1;
+  }
+
+  player.x += move * player.speed * deltaTime;
+  player.x = clamp(player.x, 24, canvas.width - player.width - 24);
+}
+
+function updateExposure(deltaTime) {
+  const inLight = isPlayerInLight();
+  const hidden = inLight && isPlayerHidden();
+
+  let recovery = 18;
+
+  if (hidden) {
+    recovery = 42;
+
+    if (game.exposure >= 60) {
+      recovery = 52;
+    }
+  }
+
+  if (smoke.active) {
+    game.exposure -= 58 * deltaTime;
+  } else if (inLight && !hidden) {
+    game.exposure += 30 * deltaTime;
+  } else {
+    game.exposure -= recovery * deltaTime;
+  }
+
+  game.exposure = clamp(game.exposure, 0, game.maxExposure);
+
+  if (game.exposure >= game.maxExposure) {
+    endGame();
+  }
+}
+
+function update(deltaTime) {
+  if (game.state === "gameover") {
+    game.gameOverFade = clamp(game.gameOverFade + deltaTime * 1.8, 0, 1);
+    return;
+  }
+
+  if (game.state !== "playing") {
+    return;
+  }
+
+  game.time += deltaTime;
+  game.score = game.time;
+
+  updatePlayer(deltaTime);
+  updateLights(deltaTime);
+  updateSmoke(deltaTime);
+  addLightIfNeeded();
+  updateExposure(deltaTime);
+  maybePlayAlert();
+  updateHud();
+}
+
+function drawBackground() {
+  ctx.fillStyle = "#050505";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle = "#101010";
+  ctx.fillRect(0, canvas.height - 84, canvas.width, 84);
+}
+
+function drawPillars() {
+  pillars.forEach((pillar) => {
+    ctx.fillStyle = "#161616";
+    ctx.fillRect(pillar.x, pillar.top, pillar.width, canvas.height - pillar.top);
+
+    ctx.fillStyle = "#2d2d2d";
+    ctx.fillRect(pillar.x + pillar.width - 8, pillar.top, 8, canvas.height - pillar.top);
+  });
+}
+
+function drawLight(light) {
+  const bottomY = canvas.height;
+  const halfWidth = getBeamHalfWidth(light, bottomY);
+
+  const gradient = ctx.createLinearGradient(light.x, light.y, light.x, bottomY);
+  gradient.addColorStop(0, "rgba(255, 255, 255, 0.36)");
+  gradient.addColorStop(0.35, "rgba(255, 255, 255, 0.18)");
+  gradient.addColorStop(1, "rgba(255, 255, 255, 0.02)");
+
+  ctx.fillStyle = gradient;
+  ctx.beginPath();
+  ctx.moveTo(light.x - 14, light.y);
+  ctx.lineTo(light.x + 14, light.y);
+  ctx.lineTo(light.x + halfWidth, bottomY);
+  ctx.lineTo(light.x - halfWidth, bottomY);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(light.x, light.y, 10, 0, Math.PI * 2);
+  ctx.stroke();
+}
+
+function drawLights() {
+  lights.forEach((light) => {
+    drawLight(light);
+  });
+}
+
+function drawShadowHints() {
+  lights.forEach((light) => {
+    pillars.forEach((pillar) => {
+      const leftX = pillar.x;
+      const rightX = pillar.x + pillar.width;
+      const bottomY = canvas.height;
+      const extend = 9;
+
+      ctx.fillStyle = "rgba(0, 0, 0, 0.58)";
+      ctx.beginPath();
+      ctx.moveTo(leftX, pillar.top);
+      ctx.lineTo(rightX, pillar.top);
+      ctx.lineTo(rightX + (rightX - light.x) * extend, bottomY);
+      ctx.lineTo(leftX + (leftX - light.x) * extend, bottomY);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(leftX, pillar.top);
+      ctx.lineTo(leftX + (leftX - light.x) * extend, bottomY);
+      ctx.moveTo(rightX, pillar.top);
+      ctx.lineTo(rightX + (rightX - light.x) * extend, bottomY);
+      ctx.stroke();
+    });
+  });
+}
+
+function drawSmoke() {
+  if (!smoke.active) {
+    return;
+  }
+
+  const centerX = player.x + player.width / 2;
+  const centerY = player.y + player.height / 2;
+
+  for (let i = 0; i < 6; i += 1) {
+    const offsetX = (i - 2.5) * 12;
+    const offsetY = (i % 2 === 0 ? -10 : 8) + i * 2;
+    const radius = 18 + i * 3;
+
+    ctx.fillStyle = "rgba(230, 230, 230, 0.18)";
+    ctx.beginPath();
+    ctx.arc(centerX + offsetX, centerY + offsetY, radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawPlayer() {
+  const inLight = isPlayerInLight();
+  const hidden = inLight && isPlayerHidden();
+
+  ctx.fillStyle = hidden ? "#6f6f6f" : inLight ? "#f1f1f1" : "#c8c8c8";
+  ctx.fillRect(player.x, player.y, player.width, player.height);
+
+  if (hidden) {
+    ctx.strokeStyle = `rgba(255, 255, 255, ${1 - game.gameOverFade * 0.8})`;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(player.x - 2, player.y - 2, player.width + 4, player.height + 4);
+  }
+
+  ctx.fillStyle = "#000000";
+  ctx.fillRect(player.x + 8, player.y + 10, 6, 6);
+  ctx.fillRect(player.x + 20, player.y + 10, 6, 6);
+}
+
+function drawGameOverOverlay() {
+  if (game.gameOverFade <= 0) {
+    return;
+  }
+
+  ctx.fillStyle = `rgba(0, 0, 0, ${game.gameOverFade * 0.45})`;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.strokeStyle = `rgba(255, 255, 255, ${0.22 - game.gameOverFade * 0.12})`;
+  ctx.lineWidth = 6;
+  ctx.strokeRect(16, 16, canvas.width - 32, canvas.height - 32);
+}
+
+function draw() {
+  drawBackground();
+  drawLights();
+  drawShadowHints();
+  drawPillars();
+  drawSmoke();
+  drawPlayer();
+  drawGameOverOverlay();
+}
+
+function handleToggleAction() {
+  if (!game.soundChoiceDone) {
+    showSoundModal();
+    return;
+  }
+
+  if (game.state === "idle" || game.state === "gameover") {
+    startGame();
+    return;
+  }
+
+  if (game.state === "playing") {
+    pauseGame();
+    return;
+  }
+
+  if (game.state === "paused") {
+    resumeGame();
+  }
+}
+
+let lastTime = 0;
+
+function loop(timestamp) {
+  const deltaTime = Math.min((timestamp - lastTime) / 1000, 0.033);
+  lastTime = timestamp;
+
+  update(deltaTime);
+  draw();
+
+  requestAnimationFrame(loop);
+}
+
+window.addEventListener("keydown", (event) => {
+  if (!game.soundChoiceDone && event.code === "Space") {
+    event.preventDefault();
+    showSoundModal();
+    return;
+  }
+
+  if (event.code === "ArrowLeft" || event.code === "KeyA") {
+    keys.left = true;
+  }
+
+  if (event.code === "ArrowRight" || event.code === "KeyD") {
+    keys.right = true;
+  }
+
+  if (event.code === "ShiftLeft" || event.code === "ShiftRight") {
+    event.preventDefault();
+    useSmoke();
+  }
+
+  if (event.code === "Space") {
+    event.preventDefault();
+    handleToggleAction();
+  }
+});
+
+window.addEventListener("keyup", (event) => {
+  if (event.code === "ArrowLeft" || event.code === "KeyA") {
+    keys.left = false;
+  }
+
+  if (event.code === "ArrowRight" || event.code === "KeyD") {
+    keys.right = false;
+  }
+});
+
+controlButtons.forEach((button) => {
+  const control = button.dataset.control;
+
+  const press = (event) => {
+    event.preventDefault();
+
+    if (!game.soundChoiceDone) {
+      showSoundModal();
+      return;
+    }
+
+    if (game.soundEnabled) {
+      markAudioEnabled();
+    }
+
+    if (control === "left") {
+      keys.left = true;
+    }
+
+    if (control === "right") {
+      keys.right = true;
+    }
+  };
+
+  const release = (event) => {
+    event.preventDefault();
+
+    if (control === "left") {
+      keys.left = false;
+    }
+
+    if (control === "right") {
+      keys.right = false;
+    }
+  };
+
+  if (control === "left" || control === "right") {
+    button.addEventListener("pointerdown", press);
+    button.addEventListener("pointerup", release);
+    button.addEventListener("pointerleave", release);
+    button.addEventListener("pointercancel", release);
+  }
+
+  if (control === "smoke") {
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      useSmoke();
+    });
+  }
+
+  if (control === "toggle") {
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      handleToggleAction();
+    });
+  }
+});
+
+localeButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    setLocale(button.dataset.locale);
+  });
+});
+
+soundButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    const enabled = button.dataset.sound === "on";
+    setSoundEnabled(enabled);
+  });
+});
+
+soundChoiceButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    const enabled = button.dataset.soundChoice === "on";
+    confirmSoundChoice(enabled);
+  });
+});
+
+resetGame();
+setLocale("ja");
+setSoundEnabled(true);
+showSoundModal();
+requestAnimationFrame(loop);
