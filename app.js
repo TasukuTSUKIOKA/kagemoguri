@@ -347,6 +347,21 @@ function buildSharePayload() {
   };
 }
 
+function buildXShareUrl() {
+  const url = new URL("https://twitter.com/intent/tweet");
+  url.searchParams.set("text", `${buildShareText()}\n#影もぐり @TasukuTSUKIOKA`);
+  url.searchParams.set("url", window.location.href);
+  return url.toString();
+}
+
+function openXShare(event) {
+  if (event) {
+    event.preventDefault();
+  }
+
+  window.location.assign(buildXShareUrl());
+}
+
 function setShareFeedback(text = "") {
   if (!shareFeedback) {
     return;
@@ -367,7 +382,7 @@ function updateSharePanel() {
   if (!isGameOver) {
     sharePreview.textContent = "";
     setShareFeedback();
-    shareXButton.href = "https://x.com/intent/post";
+    shareXButton.href = "https://twitter.com/intent/tweet";
     return;
   }
 
@@ -377,10 +392,7 @@ function updateSharePanel() {
   shareXButton.textContent = t("share_x");
   shareCopyButton.textContent = t("share_copy");
 
-  const url = new URL("https://x.com/intent/post");
-  url.searchParams.set("text", payload.xText);
-  url.searchParams.set("url", payload.url);
-  shareXButton.href = url.toString();
+  shareXButton.href = buildXShareUrl();
 }
 
 async function handleCopyShare() {
@@ -1072,6 +1084,12 @@ soundChoiceButtons.forEach((button) => {
 if (shareCopyButton) {
   shareCopyButton.addEventListener("click", () => {
     handleCopyShare();
+  });
+}
+
+if (shareXButton) {
+  shareXButton.addEventListener("click", (event) => {
+    openXShare(event);
   });
 }
 
