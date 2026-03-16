@@ -37,7 +37,9 @@ https://tasukutsukioka.github.io/kagemoguri/
 - Development assistance / 開発補助: OpenAI Codex
 - BGM: generated with Google Gemini
 - Sound effects / 効果音: generated with ElevenLabs (`elevenlabs.io`)
+
 ## Changelog / 更新履歴
 
+- v1.2.0: 新仕様を追加し、ゲームバランスを調整 / Added a new gameplay mechanic and updated game balance
 - v1.1.0: ゲームバランスを調整 / Game balance updated
 - v1.0.0: 公開 / Initial release

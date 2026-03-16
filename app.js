@@ -20,7 +20,7 @@ const soundChoiceButtons = document.querySelectorAll("[data-sound-choice]");
 const soundModalEl = document.getElementById("sound-modal");
 const i18nNodes = document.querySelectorAll("[data-i18n]");
 
-const GAME_VERSION = "1.1.0";
+const GAME_VERSION = "1.2.0";
 
 const locales = {
   ja: {
@@ -122,6 +122,16 @@ const player = {
   x: canvas.width / 2 - 17,
   y: canvas.height - 76,
   speed: 320,
+};
+
+const camp = {
+  anchorX: player.x + player.width / 2,
+  stillTime: 0,
+  targetLightIndex: -1,
+  triggerTime: 2.4,
+  releaseDistance: 36,
+  driftSpeed: 90,
+  slowSpeed: 26,
 };
 
 const pillars = [
@@ -452,6 +462,12 @@ function resetSmoke() {
   smoke.cooldownLeft = 0;
 }
 
+function resetCamp() {
+  camp.anchorX = player.x + player.width / 2;
+  camp.stillTime = 0;
+  camp.targetLightIndex = -1;
+}
+
 function resetGame() {
   game.state = "idle";
   game.time = 0;
@@ -463,6 +479,7 @@ function resetGame() {
   player.x = canvas.width / 2 - player.width / 2;
   resetLights();
   resetSmoke();
+  resetCamp();
   stopBgm();
 
   syncMessageByState();
@@ -489,6 +506,7 @@ function startGame() {
   player.x = canvas.width / 2 - player.width / 2;
   resetLights();
   resetSmoke();
+  resetCamp();
 
   hideMessage();
   updateHud();
@@ -698,8 +716,62 @@ function addLightIfNeeded() {
   }
 }
 
-function updateLights(deltaTime) {
+function getPlayerCenterX() {
+  return player.x + player.width / 2;
+}
+
+function updateCamp(deltaTime) {
+  const playerCenterX = getPlayerCenterX();
+  const movedDistance = Math.abs(playerCenterX - camp.anchorX);
+
+  if (movedDistance >= camp.releaseDistance) {
+    camp.anchorX = playerCenterX;
+    camp.stillTime = 0;
+    camp.targetLightIndex = -1;
+    return;
+  }
+
+  camp.stillTime += deltaTime;
+
+  if (camp.stillTime < camp.triggerTime || lights.length === 0) {
+    camp.targetLightIndex = -1;
+    return;
+  }
+
+  let nearestIndex = 0;
+  let nearestDistance = Infinity;
+
   lights.forEach((light, index) => {
+    const distance = Math.abs(light.x - playerCenterX);
+
+    if (distance < nearestDistance) {
+      nearestDistance = distance;
+      nearestIndex = index;
+    }
+  });
+
+  camp.targetLightIndex = nearestIndex;
+}
+
+function updateLights(deltaTime) {
+  const playerCenterX = getPlayerCenterX();
+
+  lights.forEach((light, index) => {
+    if (game.time > 8) {
+      const speedTime = Math.min(game.time, 180);
+      light.speed = 140 + index * 24 + speedTime * 1.1;
+    }
+
+    if (index === camp.targetLightIndex) {
+      const deltaX = playerCenterX - light.x;
+      const drift = clamp(deltaX, -camp.driftSpeed, camp.driftSpeed);
+      light.x += drift * deltaTime;
+
+      const direction = Math.sign(deltaX) || light.direction;
+      light.direction = direction;
+      light.speed = Math.min(light.speed, camp.slowSpeed);
+    }
+
     light.x += light.speed * light.direction * deltaTime;
 
     const leftEdge = 40;
@@ -713,11 +785,6 @@ function updateLights(deltaTime) {
     if (light.x >= rightEdge) {
       light.x = rightEdge;
       light.direction = -1;
-    }
-
-    if (game.time > 8) {
-      const speedTime = Math.min(game.time, 180);
-      light.speed = 140 + index * 24 + speedTime * 1.1;
     }
   });
 }
@@ -798,6 +865,7 @@ function update(deltaTime) {
   game.score = game.time;
 
   updatePlayer(deltaTime);
+  updateCamp(deltaTime);
   updateLights(deltaTime);
   updateSmoke(deltaTime);
   addLightIfNeeded();
