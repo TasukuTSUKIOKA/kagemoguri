@@ -18,7 +18,7 @@ const i18nNodes = document.querySelectorAll("[data-i18n]");
 const locales = {
   ja: {
     title: "影もぐり",
-    eyebrow: "hide in the shadow",
+    eyebrow: "hide in the shadows",
     lead: "光を避けて、影へもぐれ。 見つかりそうになったら煙幕で立て直せ。",
     score_label: "score",
     danger_label: "見つかりそう",
@@ -45,8 +45,8 @@ const locales = {
   },
   en: {
     title: "Kagemoguri",
-    eyebrow: "hide in the shadow",
-    lead: "Dodge the light and slip into shadow. If you are about to be seen, recover with smoke.",
+    eyebrow: "hide in the shadows",
+    lead: "Dodge the light and slip into the shadows. If you are about to be seen, recover with smoke.",
     score_label: "score",
     danger_label: "spotted soon",
     smoke_button: "Smoke",
@@ -61,7 +61,7 @@ const locales = {
     toggle_paused: "Resume",
     toggle_gameover: "Retry",
     message_idle_title: "press space",
-    message_idle_text: "Hide in shadow. Use smoke if you are about to be seen.",
+    message_idle_text: "Hide in the shadows. Use smoke if you are about to be seen.",
     message_paused_title: "paused",
     message_paused_text: "Press Space to return",
     message_gameover_title: "spotted.",
