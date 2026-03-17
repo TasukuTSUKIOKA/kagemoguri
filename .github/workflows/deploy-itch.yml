@@ -1,0 +1,21 @@
+name: deploy to itch.io
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup butler
+        uses: jdno/setup-butler@v1
+
+      - name: Push to itch.io
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+          ITCH_TARGET: ${{ vars.ITCH_TARGET }}
+        run: butler push . "$ITCH_TARGET" --userversion "${{ github.sha }}"
