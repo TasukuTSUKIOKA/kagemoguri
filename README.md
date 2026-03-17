@@ -8,7 +8,8 @@ If you're about to be spotted, use a smoke screen to make your escape.
 
 ## Play / プレイ
 
-https://tasukutsukioka.github.io/kagemoguri/
+- GitHub Pages: https://tasukutsukioka.github.io/kagemoguri/
+- itch.io: https://tasukutsukioka.itch.io/kagemoguri
 
 ## Play Screen / プレイ画面
 
@@ -30,6 +31,11 @@ https://tasukutsukioka.github.io/kagemoguri/
 - HTML
 - CSS
 - JavaScript
+
+## Deployment / デプロイ
+
+- GitHub Pages: updated from the `kagemoguri` repository
+- itch.io: deployed manually from GitHub Actions (`deploy to itch.io`)
 
 ## Credits / クレジット
 
