@@ -1,52 +1,53 @@
-# 影もぐり / Kagemoguri
+# å½±ã‚‚ãã‚Š / Kagemoguri
 
-迫るサーチライトを避けながら、影へもぐれ。  
-見つかりそうになったら煙幕で切り抜けろ。
+è¿«ã‚‹ã‚µãƒ¼ãƒãƒ©ã‚¤ãƒˆã‚’é¿ã‘ãªãŒã‚‰ã€å½±ã¸ã‚‚ãã‚Œã€‚  
+è¦‹ã¤ã‹ã‚Šãã†ã«ãªã£ãŸã‚‰ç…™å¹•ã§åˆ‡ã‚ŠæŠœã‘ã‚ã€‚
 
 Stay in the shadows while avoiding the sweeping searchlights.  
 If you're about to be spotted, use a smoke screen to make your escape.
 
-## Play / プレイ
+## Play / ãƒ—ãƒ¬ã‚¤
 
 - GitHub Pages: https://tasukutsukioka.github.io/kagemoguri/
 - itch.io: https://tasukutsukioka.itch.io/kagemoguri
 
-## Play Screen / プレイ画面
+## Play Screen / ãƒ—ãƒ¬ã‚¤ç”»é¢
 
 ![Kagemoguri gameplay screen](./assets/screenshot.png)
 
-## Controls / 操作
+## Controls / æ“ä½œ
 
-- Move / 移動: `←` `→` / `A` `D` / on-screen buttons
-- Smoke Screen / 煙幕: `Shift` / smoke button
-- Start / Pause / Resume / Retry / 開始・一時停止・再開・リトライ: `Space` / start button
+- Move / ç§»å‹•: `â†` `â†’` / `A` `D` / on-screen buttons
+- Smoke Screen / ç…™å¹•: `Shift` / smoke button
+- Start / Pause / Resume / Retry / é–‹å§‹ãƒ»ä¸€æ™‚åœæ­¢ãƒ»å†é–‹ãƒ»ãƒªãƒˆãƒ©ã‚¤: `Space` / start button
 
-## Language / 言語
+## Language / è¨€èªž
 
-- Japanese / 日本語
-- English / 英語
+- Japanese / æ—¥æœ¬èªž
+- English / è‹±èªž
 
-## Tech / 技術
+## Tech / æŠ€è¡“
 
 - HTML
 - CSS
 - JavaScript
 
-## Deployment / デプロイ
+## Deployment / ãƒ‡ãƒ—ãƒ­ã‚¤
 
 - GitHub Pages: updated from the `kagemoguri` repository
 - itch.io: deployed manually from GitHub Actions (`deploy to itch.io`)
 
-## Credits / クレジット
+## Credits / ã‚¯ãƒ¬ã‚¸ãƒƒãƒˆ
 
-- Game, design, implementation / ゲーム制作・デザイン・実装: Tasuku TSUKIOKA
-- Development assistance / 開発補助: OpenAI Codex
+- Game, design, implementation / ã‚²ãƒ¼ãƒ åˆ¶ä½œãƒ»ãƒ‡ã‚¶ã‚¤ãƒ³ãƒ»å®Ÿè£…: Tasuku TSUKIOKA
+- Development assistance / é–‹ç™ºè£œåŠ©: OpenAI Codex
 - BGM: generated with Google Gemini
-- Sound effects / 効果音: generated with ElevenLabs (`elevenlabs.io`)
+- Sound effects / åŠ¹æžœéŸ³: generated with ElevenLabs (`elevenlabs.io`)
 
-## Changelog / 更新履歴
+## Changelog / æ›´æ–°å±¥æ­´
 
-- v1.3.0: ランダム性の調整 / Updated randomness tuning
-- v1.2.0: 新仕様を追加し、ゲームバランスを調整 / Added a new gameplay mechanic and updated game balance
-- v1.1.0: ゲームバランスを調整 / Game balance updated
-- v1.0.0: 公開 / Initial release
+- v1.3.1: 公開方法の改善 / Improved release process
+- v1.3.0: ãƒ©ãƒ³ãƒ€ãƒ æ€§ã®èª¿æ•´ / Updated randomness tuning
+- v1.2.0: æ–°ä»•æ§˜ã‚’è¿½åŠ ã—ã€ã‚²ãƒ¼ãƒ ãƒãƒ©ãƒ³ã‚¹ã‚’èª¿æ•´ / Added a new gameplay mechanic and updated game balance
+- v1.1.0: ã‚²ãƒ¼ãƒ ãƒãƒ©ãƒ³ã‚¹ã‚’èª¿æ•´ / Game balance updated
+- v1.0.0: å…¬é–‹ / Initial release
