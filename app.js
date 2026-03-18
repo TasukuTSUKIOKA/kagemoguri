@@ -227,12 +227,16 @@ const audioState = {
   lastAlertAt: 0,
 };
 
+const sfxSpriteMap = {
+  start: { start: 0.0, duration: 1.0, volume: 0.65 },
+  smoke: { start: 1.25, duration: 2.0, volume: 0.75 },
+  alert: { start: 3.5, duration: 2.0, volume: 0.45 },
+  gameover: { start: 5.75, duration: 1.0, volume: 0.8 },
+};
+
 const sounds = {
-  start: createAudio("sounds/start.mp3", 0.65),
-  smoke: createAudio("sounds/smoke.mp3", 0.75),
-  alert: createAudio("sounds/alert.mp3", 0.45),
-  gameover: createAudio("sounds/gameover.mp3", 0.8),
   bgm: createAudio("sounds/bgm.mp3", 0.35, true),
+  sprite: createAudio("sounds/sfx-sprite.mp3", 1),
 };
 
 function createAudio(src, volume, loop = false) {
@@ -251,6 +255,51 @@ function createAudio(src, volume, loop = false) {
   });
 
   return audio;
+}
+
+function stopSpriteAudio(audio) {
+  audio.pause();
+
+  try {
+    audio.currentTime = 0;
+  } catch {
+    return;
+  }
+
+  if (audio.dataset.stopTimer) {
+    window.clearTimeout(Number(audio.dataset.stopTimer));
+    audio.dataset.stopTimer = "";
+  }
+}
+
+function playSpriteSound(name) {
+  const sprite = sfxSpriteMap[name];
+  const audio = sounds.sprite;
+
+  if (!sprite || !audio || audio.dataset.loaded === "error") {
+    return;
+  }
+
+  stopSpriteAudio(audio);
+  audio.volume = sprite.volume;
+
+  try {
+    audio.currentTime = sprite.start;
+  } catch {
+    return;
+  }
+
+  const playPromise = audio.play();
+
+  if (playPromise && typeof playPromise.catch === "function") {
+    playPromise.catch(() => {});
+  }
+
+  const stopTimer = window.setTimeout(() => {
+    audio.pause();
+  }, sprite.duration * 1000);
+
+  audio.dataset.stopTimer = String(stopTimer);
 }
 
 function markAudioEnabled() {
@@ -302,23 +351,7 @@ function playSound(name) {
     return;
   }
 
-  const audio = sounds[name];
-
-  if (!audio || audio.dataset.loaded === "error") {
-    return;
-  }
-
-  try {
-    audio.currentTime = 0;
-  } catch {
-    return;
-  }
-
-  const playPromise = audio.play();
-
-  if (playPromise && typeof playPromise.catch === "function") {
-    playPromise.catch(() => {});
-  }
+  playSpriteSound(name);
 }
 
 function playBgm() {

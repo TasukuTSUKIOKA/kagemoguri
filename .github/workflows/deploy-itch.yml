@@ -8,8 +8,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout kagemoguri
         uses: actions/checkout@v4
+
+      - name: Checkout private game assets
+        uses: actions/checkout@v4
+        with:
+          repository: TasukuTSUKIOKA/game
+          token: ${{ secrets.GAME_REPO_TOKEN }}
+          path: private-game
+
+      - name: Restore sounds
+        run: |
+          rm -rf sounds
+          mkdir -p sounds
+          cp -r private-game/sounds/. sounds/
 
       - name: Setup butler
         uses: jdno/setup-butler@v1
