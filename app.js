@@ -150,6 +150,78 @@ const lights = [
   },
 ];
 
+const lightSpawnConfigs = {
+  opening: [
+    {
+      minX: 120,
+      maxX: 260,
+      y: 70,
+      spread: 72,
+      baseSpeed: 140,
+      direction: 1,
+      speedVariance: 30,
+    },
+    {
+      minX: 660,
+      maxX: 820,
+      y: 70,
+      spread: 72,
+      baseSpeed: 140,
+      direction: -1,
+      speedVariance: 30,
+    },
+  ],
+  second: [
+    {
+      minX: 120,
+      maxX: 260,
+      y: 90,
+      spread: 58,
+      baseSpeed: 175,
+      direction: 1,
+      speedVariance: 36,
+    },
+    {
+      minX: 660,
+      maxX: 820,
+      y: 90,
+      spread: 58,
+      baseSpeed: 175,
+      direction: -1,
+      speedVariance: 36,
+    },
+  ],
+  third: [
+    {
+      minX: 200,
+      maxX: 360,
+      y: 60,
+      spread: 46,
+      baseSpeed: 180,
+      direction: 1,
+      speedVariance: 42,
+    },
+    {
+      minX: 360,
+      maxX: 600,
+      y: 60,
+      spread: 46,
+      baseSpeed: 180,
+      direction: randomDirection,
+      speedVariance: 42,
+    },
+    {
+      minX: 600,
+      maxX: 760,
+      y: 60,
+      spread: 46,
+      baseSpeed: 180,
+      direction: -1,
+      speedVariance: 42,
+    },
+  ],
+};
+
 const audioState = {
   enabled: false,
   lastAlertAt: 0,
@@ -447,13 +519,70 @@ function setLocale(locale) {
   updateSharePanel();
 }
 
-function createLight(x, y, spread, speed, direction) {
-  return { x, y, spread, speed, direction };
+function randomBetween(min, max) {
+  return min + Math.random() * (max - min);
+}
+
+function randomDirection() {
+  return Math.random() < 0.5 ? -1 : 1;
+}
+
+function randomChoice(items) {
+  return items[Math.floor(Math.random() * items.length)];
+}
+
+function createLight(
+  x,
+  y,
+  spread,
+  speed,
+  direction,
+  baseSpeed = speed,
+  speedVariance = 0,
+  speedChangeInterval = randomBetween(5, 10),
+  nextSpeedChangeAt = speedChangeInterval,
+  speedOffset = 0,
+  targetSpeedOffset = speedOffset
+) {
+  return {
+    x,
+    y,
+    spread,
+    speed,
+    direction,
+    baseSpeed,
+    speedVariance,
+    speedChangeInterval,
+    nextSpeedChangeAt,
+    speedOffset,
+    targetSpeedOffset,
+  };
+}
+
+function createSpawnedLight(config) {
+  const direction =
+    typeof config.direction === "function" ? config.direction() : config.direction;
+  const speedChangeInterval = randomBetween(5, 10);
+  const speedOffset = randomBetween(-config.speedVariance, config.speedVariance);
+
+  return createLight(
+    randomBetween(config.minX, config.maxX),
+    config.y,
+    config.spread,
+    config.baseSpeed + speedOffset,
+    direction,
+    config.baseSpeed,
+    config.speedVariance,
+    speedChangeInterval,
+    speedChangeInterval,
+    speedOffset,
+    speedOffset
+  );
 }
 
 function resetLights() {
   lights.length = 0;
-  lights.push(createLight(180, 70, 72, 140, 1));
+  lights.push(createSpawnedLight(randomChoice(lightSpawnConfigs.opening)));
 }
 
 function resetSmoke() {
@@ -710,9 +839,9 @@ function addLightIfNeeded() {
   }
 
   if (lights.length === 1) {
-    lights.push(createLight(780, 90, 58, 175, -1));
+    lights.push(createSpawnedLight(randomChoice(lightSpawnConfigs.second)));
   } else if (game.time > 32 && lights.length === 2) {
-    lights.push(createLight(480, 60, 46, 180, 1));
+    lights.push(createSpawnedLight(randomChoice(lightSpawnConfigs.third)));
   }
 }
 
@@ -759,7 +888,27 @@ function updateLights(deltaTime) {
   lights.forEach((light, index) => {
     if (game.time > 8) {
       const speedTime = Math.min(game.time, 180);
-      light.speed = 140 + index * 24 + speedTime * 1.1;
+      const baseSpeed = light.baseSpeed + index * 24 + speedTime * 1.1;
+
+      if (game.time >= light.nextSpeedChangeAt) {
+        light.speedChangeInterval = randomBetween(5, 10);
+        light.nextSpeedChangeAt = game.time + light.speedChangeInterval;
+        light.targetSpeedOffset = randomBetween(
+          -light.speedVariance,
+          light.speedVariance
+        );
+      }
+
+      const speedStep = 20 * deltaTime;
+      const offsetDelta = light.targetSpeedOffset - light.speedOffset;
+
+      if (Math.abs(offsetDelta) <= speedStep) {
+        light.speedOffset = light.targetSpeedOffset;
+      } else {
+        light.speedOffset += Math.sign(offsetDelta) * speedStep;
+      }
+
+      light.speed = baseSpeed + light.speedOffset;
     }
 
     if (index === camp.targetLightIndex) {
