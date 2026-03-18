@@ -32,11 +32,6 @@ If you're about to be spotted, use a smoke screen to make your escape.
 - CSS
 - JavaScript
 
-## Deployment / デプロイ
-
-- GitHub Pages: updated from the `kagemoguri` repository
-- itch.io: deployed manually from GitHub Actions (`deploy to itch.io`)
-
 ## Credits / クレジット
 
 - Game, design, implementation / ゲーム制作・デザイン・実装: Tasuku TSUKIOKA
