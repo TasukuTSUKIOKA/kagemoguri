@@ -46,6 +46,7 @@ If you're about to be spotted, use a smoke screen to make your escape.
 
 ## Changelog / 更新履歴
 
+- v1.3.0: ランダム性の調整 / Updated randomness tuning
 - v1.2.0: 新仕様を追加し、ゲームバランスを調整 / Added a new gameplay mechanic and updated game balance
 - v1.1.0: ゲームバランスを調整 / Game balance updated
 - v1.0.0: 公開 / Initial release

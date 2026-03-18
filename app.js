@@ -20,7 +20,7 @@ const soundChoiceButtons = document.querySelectorAll("[data-sound-choice]");
 const soundModalEl = document.getElementById("sound-modal");
 const i18nNodes = document.querySelectorAll("[data-i18n]");
 
-const GAME_VERSION = "1.2.0";
+const GAME_VERSION = "1.3.0";
 
 const locales = {
   ja: {
@@ -50,7 +50,7 @@ const locales = {
     sound_on: "Sound On",
     sound_off: "Sound Off",
     score_unit: "秒",
-    share_text: "『影もぐり』で {score} 隠れることに成功！",
+    share_text: "で {score} 隠れることに成功！",
     share_x: "Xでシェア",
     share_copy: "コピー",
     share_copied: "結果をコピーした",
@@ -82,7 +82,7 @@ const locales = {
     sound_on: "Sound On",
     sound_off: "Sound Off",
     score_unit: "sec",
-    share_text: "I stayed hidden for {score} in Kagemoguri!",
+    share_text: "I stayed hidden for {score}!",
     share_x: "Share on X",
     share_copy: "Copy",
     share_copied: "Result copied",
@@ -417,7 +417,7 @@ function formatScore(value) {
 }
 
 function buildShareText() {
-  return `Version ${GAME_VERSION} ${t("share_text", {
+  return `『影もぐり』v${GAME_VERSION} ${t("share_text", {
     score: formatScore(game.score),
   })}`;
 }
