@@ -472,7 +472,6 @@ function buildXShareUrl() {
   url.searchParams.set("url", window.location.href);
   return url.toString();
 }
-
 function openXShare(event) {
   if (event) {
     event.preventDefault();
