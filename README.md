@@ -41,6 +41,7 @@ If you're about to be spotted, use a smoke screen to make your escape.
 
 ## Changelog / 更新履歴
 
+- v2.0.0: 難易度進行、称号、煙幕システムを更新 / Updated difficulty progression, titles, and smoke system
 - v1.3.1: 公開方法の改善 / Improved release process
 - v1.3.0: ランダム性の調整 / Updated randomness tuning
 - v1.2.0: 新仕様を追加し、ゲームバランスを調整 / Added a new gameplay mechanic and updated game balance

@@ -21,7 +21,7 @@ const soundChoiceButtons = document.querySelectorAll("[data-sound-choice]");
 const soundModalEl = document.getElementById("sound-modal");
 const i18nNodes = document.querySelectorAll("[data-i18n]");
 
-const GAME_VERSION = "1.3.1";
+const GAME_VERSION = "2.0.0";
 const PROGRESS_STORAGE_KEY = "kagemoguri_progress_v1";
 const TITLE_LEVEL_MAX = 10;
 
