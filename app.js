@@ -13,6 +13,7 @@ const shareFeedback = document.getElementById("share-feedback");
 const shareXButton = document.getElementById("share-x-button");
 const shareCopyButton = document.getElementById("share-copy-button");
 const controlButtons = document.querySelectorAll(".control-button");
+const smokeButton = document.querySelector('[data-control="smoke"]');
 const toggleButton = document.querySelector('[data-control="toggle"]');
 const localeButtons = document.querySelectorAll(".locale-button");
 const soundButtons = document.querySelectorAll(".sound-button");
@@ -21,6 +22,124 @@ const soundModalEl = document.getElementById("sound-modal");
 const i18nNodes = document.querySelectorAll("[data-i18n]");
 
 const GAME_VERSION = "1.3.1";
+const PROGRESS_STORAGE_KEY = "kagemoguri_progress_v1";
+const TITLE_LEVEL_MAX = 10;
+
+const titleThresholds = [
+  { level: 1, seconds: 30, titleJa: "影もぐりレベル1", titleEn: "Kagemoguri Level 1" },
+  { level: 2, seconds: 45, titleJa: "影もぐりレベル2", titleEn: "Kagemoguri Level 2" },
+  { level: 3, seconds: 75, titleJa: "影もぐりレベル3", titleEn: "Kagemoguri Level 3" },
+  { level: 4, seconds: 120, titleJa: "影もぐりレベル4", titleEn: "Kagemoguri Level 4" },
+  { level: 5, seconds: 200, titleJa: "影もぐりレベル5", titleEn: "Kagemoguri Level 5" },
+  { level: 6, seconds: 320, titleJa: "影もぐりレベル6", titleEn: "Kagemoguri Level 6" },
+  { level: 7, seconds: 460, titleJa: "影もぐりレベル7", titleEn: "Kagemoguri Level 7" },
+  { level: 8, seconds: 600, titleJa: "影もぐりレベル8", titleEn: "Kagemoguri Level 8" },
+  { level: 9, seconds: 800, titleJa: "影もぐりレベル9", titleEn: "Kagemoguri Level 9" },
+  { level: 10, seconds: 1000, titleJa: "影もぐり伝説", titleEn: "Kagemoguri Legend" },
+];
+
+const difficultyTiers = [
+  {
+    level: 1,
+    lightCount: 1,
+    speedMultiplier: 1.0,
+    feintChance: 0.0,
+    speedVarianceMultiplier: 0.8,
+    campTriggerTime: 2.4,
+    campDriftSpeed: 90,
+    campSlowSpeed: 26,
+  },
+  {
+    level: 2,
+    lightCount: 2,
+    speedMultiplier: 1.04,
+    feintChance: 0.1,
+    speedVarianceMultiplier: 0.86,
+    campTriggerTime: 2.4,
+    campDriftSpeed: 90,
+    campSlowSpeed: 26,
+  },
+  {
+    level: 3,
+    lightCount: 3,
+    speedMultiplier: 1.08,
+    feintChance: 0.18,
+    speedVarianceMultiplier: 0.92,
+    campTriggerTime: 2.4,
+    campDriftSpeed: 90,
+    campSlowSpeed: 27,
+  },
+  {
+    level: 4,
+    lightCount: 3,
+    speedMultiplier: 1.12,
+    feintChance: 0.28,
+    speedVarianceMultiplier: 0.98,
+    campTriggerTime: 2.4,
+    campDriftSpeed: 90,
+    campSlowSpeed: 27,
+  },
+  {
+    level: 5,
+    lightCount: 3,
+    speedMultiplier: 1.16,
+    feintChance: 0.38,
+    speedVarianceMultiplier: 1.04,
+    campTriggerTime: 1.95,
+    campDriftSpeed: 106,
+    campSlowSpeed: 26,
+  },
+  {
+    level: 6,
+    lightCount: 3,
+    speedMultiplier: 1.2,
+    feintChance: 0.5,
+    speedVarianceMultiplier: 1.1,
+    campTriggerTime: 1.82,
+    campDriftSpeed: 110,
+    campSlowSpeed: 26,
+  },
+  {
+    level: 7,
+    lightCount: 3,
+    speedMultiplier: 1.24,
+    feintChance: 0.62,
+    speedVarianceMultiplier: 1.16,
+    campTriggerTime: 1.68,
+    campDriftSpeed: 114,
+    campSlowSpeed: 25,
+  },
+  {
+    level: 8,
+    lightCount: 4,
+    speedMultiplier: 1.28,
+    feintChance: 0.74,
+    speedVarianceMultiplier: 1.22,
+    campTriggerTime: 1.54,
+    campDriftSpeed: 118,
+    campSlowSpeed: 25,
+  },
+  {
+    level: 9,
+    lightCount: 4,
+    speedMultiplier: 1.31,
+    feintChance: 0.84,
+    speedVarianceMultiplier: 1.28,
+    campTriggerTime: 1.44,
+    campDriftSpeed: 122,
+    campSlowSpeed: 24,
+  },
+  {
+    level: 10,
+    lightCount: 4,
+    speedMultiplier: 1.34,
+    feintChance: 0.92,
+    speedVarianceMultiplier: 1.34,
+    campTriggerTime: 1.34,
+    campDriftSpeed: 126,
+    campSlowSpeed: 24,
+  },
+];
 
 const locales = {
   ja: {
@@ -30,12 +149,14 @@ const locales = {
     score_label: "スコア",
     danger_label: "見つかりそう",
     smoke_button: "煙幕",
+    smoke_button_ready: "煙幕 使用可 {charges}",
+    smoke_button_waiting: "煙幕 準備中 {charges}",
     tip_move: "移動: ← → / A D / 画面ボタン",
     tip_smoke: "煙幕: Shift / 煙幕ボタン",
     tip_toggle: "開始・停止・再開・リトライ: Space / 開始ボタン",
-    smoke_ready: "煙幕 準備完了",
-    smoke_cooldown: "煙幕 {time}",
-    smoke_active: "煙幕 {time}",
+    smoke_ready: "煙幕 使用可 {charges}",
+    smoke_cooldown: "煙幕 準備中 {time} {charges}",
+    smoke_active: "煙幕 発動中 {time} {charges}",
     toggle_idle: "開始",
     toggle_playing: "停止",
     toggle_paused: "再開",
@@ -54,6 +175,13 @@ const locales = {
     share_x: "Xでシェア",
     share_copy: "コピー",
     share_copied: "結果をコピーした",
+    title_rank_none: "称号なし",
+    result_survived: "生存",
+    result_new_title: "新称号: {title}",
+    result_current_title: "現在の最高称号: {title}",
+    result_next_title: "次の{title}まであと{seconds}",
+    result_legend_cleared: "影もぐり伝説、達成済み",
+    message_gameover_retry: "Spaceまたは再挑戦ボタンでやり直し",
   },
   en: {
     title: "Kagemoguri",
@@ -62,12 +190,14 @@ const locales = {
     score_label: "Score",
     danger_label: "spotted soon",
     smoke_button: "Smoke",
+    smoke_button_ready: "Smoke Ready {charges}",
+    smoke_button_waiting: "Smoke Loading {charges}",
     tip_move: "Move: ← → / A D / on-screen buttons",
     tip_smoke: "Smoke: Shift / smoke button",
     tip_toggle: "Start / pause / resume / retry: Space / start button",
-    smoke_ready: "Smoke Ready",
-    smoke_cooldown: "Smoke {time}",
-    smoke_active: "Smoke {time}",
+    smoke_ready: "Smoke Ready {charges}",
+    smoke_cooldown: "Smoke Loading {time} {charges}",
+    smoke_active: "Smoke Active {time} {charges}",
     toggle_idle: "Start",
     toggle_playing: "Pause",
     toggle_paused: "Resume",
@@ -86,6 +216,13 @@ const locales = {
     share_x: "Share on X",
     share_copy: "Copy",
     share_copied: "Result copied",
+    title_rank_none: "No Title",
+    result_survived: "Survived",
+    result_new_title: "New Title: {title}",
+    result_current_title: "Highest Title: {title}",
+    result_next_title: "Next: {title} in {seconds}",
+    result_legend_cleared: "Kagemoguri Legend achieved",
+    message_gameover_retry: "Press Space or Retry to try again",
   },
 };
 
@@ -106,6 +243,13 @@ const game = {
   locale: "ja",
   soundEnabled: true,
   soundChoiceDone: false,
+  difficultyLevel: 1,
+  currentTier: difficultyTiers[0],
+  latestUnlockedTitles: [],
+  progress: {
+    bestTime: 0,
+    unlockedLevel: 0,
+  },
 };
 
 const smoke = {
@@ -113,7 +257,9 @@ const smoke = {
   activeTime: 0,
   duration: 2.5,
   cooldown: 18,
-  cooldownLeft: 0,
+  maxCharges: 2,
+  charges: 2,
+  rechargeTimer: 0,
 };
 
 const player = {
@@ -122,6 +268,8 @@ const player = {
   x: canvas.width / 2 - 17,
   y: canvas.height - 76,
   speed: 320,
+  speedPenaltyTimer: 0,
+  speedPenaltyMultiplier: 1,
 };
 
 const camp = {
@@ -132,6 +280,12 @@ const camp = {
   releaseDistance: 36,
   driftSpeed: 90,
   slowSpeed: 26,
+};
+
+const defaultCampValues = {
+  triggerTime: camp.triggerTime,
+  driftSpeed: camp.driftSpeed,
+  slowSpeed: camp.slowSpeed,
 };
 
 const pillars = [
@@ -588,6 +742,10 @@ function createLight(
     nextSpeedChangeAt,
     speedOffset,
     targetSpeedOffset,
+    feintTimer: 0,
+    feintSlowMultiplier: 1,
+    lastPlayerDeltaX: 0,
+    passPenaltyCooldown: 0,
   };
 }
 
@@ -617,16 +775,220 @@ function resetLights() {
   lights.push(createSpawnedLight(randomChoice(lightSpawnConfigs.opening)));
 }
 
+function getTitleByLevel(level) {
+  const threshold = titleThresholds.find((entry) => entry.level === level);
+
+  if (!threshold) {
+    return t("title_rank_none");
+  }
+
+  return game.locale === "ja" ? threshold.titleJa : threshold.titleEn;
+}
+
+function getReachedLevel(seconds) {
+  let level = 0;
+
+  titleThresholds.forEach((threshold) => {
+    if (seconds >= threshold.seconds) {
+      level = threshold.level;
+    }
+  });
+
+  return level;
+}
+
+function getTierByLevel(level) {
+  const safeLevel = clamp(level || 1, 1, TITLE_LEVEL_MAX);
+  return difficultyTiers[safeLevel - 1];
+}
+
+function getTierByTime(seconds) {
+  return getTierByLevel(Math.max(1, getReachedLevel(seconds)));
+}
+
+function loadProgress() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(PROGRESS_STORAGE_KEY) || "{}");
+    game.progress.bestTime = Math.max(0, Number(saved.bestTime) || 0);
+    game.progress.unlockedLevel = clamp(
+      Math.floor(Number(saved.unlockedLevel) || 0),
+      0,
+      TITLE_LEVEL_MAX
+    );
+  } catch {
+    game.progress.bestTime = 0;
+    game.progress.unlockedLevel = 0;
+  }
+}
+
+function saveProgress() {
+  localStorage.setItem(
+    PROGRESS_STORAGE_KEY,
+    JSON.stringify({
+      bestTime: game.progress.bestTime,
+      unlockedLevel: game.progress.unlockedLevel,
+    })
+  );
+}
+
+function syncLightsWithTier(tier) {
+  const spawnGroups = [
+    lightSpawnConfigs.opening,
+    lightSpawnConfigs.second,
+    lightSpawnConfigs.third,
+    lightSpawnConfigs.third,
+  ];
+
+  while (lights.length < tier.lightCount) {
+    const group = spawnGroups[Math.min(lights.length, spawnGroups.length - 1)];
+    lights.push(createSpawnedLight(randomChoice(group)));
+  }
+
+  while (lights.length > tier.lightCount) {
+    lights.pop();
+  }
+}
+
+function applyDifficultyTier(seconds = game.time) {
+  const tier = getTierByTime(seconds);
+  game.difficultyLevel = tier.level;
+  game.currentTier = tier;
+  camp.triggerTime = tier.campTriggerTime;
+  camp.driftSpeed = tier.campDriftSpeed;
+  camp.slowSpeed = tier.campSlowSpeed;
+  syncLightsWithTier(tier);
+}
+
+function maybeTriggerFeint(light, tier, playerCenterX) {
+  if (light.feintTimer > 0 || game.time < 8 || tier.feintChance <= 0) {
+    return;
+  }
+
+  const deltaX = playerCenterX - light.x;
+  const towardPlayer = Math.sign(deltaX) === light.direction;
+  const nearCrossing = Math.abs(deltaX) <= 120;
+
+  if (!towardPlayer || !nearCrossing) {
+    return;
+  }
+
+  if (Math.random() >= tier.feintChance) {
+    return;
+  }
+
+  light.feintTimer = randomBetween(0.3, 0.7);
+  light.feintSlowMultiplier = randomBetween(0.45, 0.7);
+}
+
+function triggerPassPenalty() {
+  const damage = player.speedPenaltyTimer > 0 ? 4 : 12;
+
+  player.speedPenaltyTimer = 0.9;
+  player.speedPenaltyMultiplier = 0.6;
+  game.exposure = clamp(game.exposure + damage, 0, game.maxExposure);
+}
+
+function updatePlayerPenalty(deltaTime) {
+  if (player.speedPenaltyTimer > 0) {
+    player.speedPenaltyTimer = Math.max(0, player.speedPenaltyTimer - deltaTime);
+  }
+
+  if (player.speedPenaltyTimer <= 0) {
+    player.speedPenaltyMultiplier = 1;
+  }
+}
+
+function maybeTriggerPassPenalty(light, playerCenterX, deltaTime) {
+  if (light.passPenaltyCooldown > 0) {
+    light.passPenaltyCooldown = Math.max(0, light.passPenaltyCooldown - deltaTime);
+  }
+
+  const deltaX = playerCenterX - light.x;
+  const previousDeltaX = light.lastPlayerDeltaX;
+  const wasApproaching = Math.sign(previousDeltaX) === light.direction;
+  const crossed = previousDeltaX !== 0 && Math.sign(previousDeltaX) !== Math.sign(deltaX);
+  const nearLight = Math.abs(deltaX) <= 54 || Math.abs(previousDeltaX) <= 54;
+
+  if (wasApproaching && crossed && nearLight && light.passPenaltyCooldown <= 0) {
+    triggerPassPenalty();
+    light.passPenaltyCooldown = 0.75;
+  }
+
+  light.lastPlayerDeltaX = deltaX;
+}
+
+function resolveProgress() {
+  const reachedLevel = getReachedLevel(game.score);
+  const newTitles = [];
+
+  if (game.score > game.progress.bestTime) {
+    game.progress.bestTime = game.score;
+  }
+
+  for (let level = game.progress.unlockedLevel + 1; level <= reachedLevel; level += 1) {
+    newTitles.push(getTitleByLevel(level));
+  }
+
+  game.progress.unlockedLevel = Math.max(game.progress.unlockedLevel, reachedLevel);
+  game.latestUnlockedTitles = newTitles;
+  saveProgress();
+}
+
+function buildGameOverMessage() {
+  const reachedLevel = getReachedLevel(game.score);
+  const highestLevel = Math.max(reachedLevel, game.progress.unlockedLevel);
+  const lines = [`${t("result_survived")} ${formatScore(game.score)}`];
+
+  if (game.latestUnlockedTitles.length > 0) {
+    lines.push(
+      t("result_new_title", {
+        title: game.latestUnlockedTitles.join(" / "),
+      })
+    );
+  } else {
+    lines.push(
+      t("result_current_title", {
+        title: highestLevel > 0 ? getTitleByLevel(highestLevel) : t("title_rank_none"),
+      })
+    );
+  }
+
+  const nextThreshold = titleThresholds.find((entry) => entry.level === highestLevel + 1);
+
+  if (nextThreshold) {
+    lines.push(
+      t("result_next_title", {
+        title: getTitleByLevel(nextThreshold.level),
+        seconds: formatScore(Math.max(0, nextThreshold.seconds - game.score)),
+      })
+    );
+  } else {
+    lines.push(t("result_legend_cleared"));
+  }
+
+  lines.push(t("message_gameover_retry"));
+  return lines.join(" / ");
+}
+
 function resetSmoke() {
   smoke.active = false;
   smoke.activeTime = 0;
-  smoke.cooldownLeft = 0;
+  smoke.charges = smoke.maxCharges;
+  smoke.rechargeTimer = 0;
+}
+
+function resetPlayerPenalty() {
+  player.speedPenaltyTimer = 0;
+  player.speedPenaltyMultiplier = 1;
 }
 
 function resetCamp() {
   camp.anchorX = player.x + player.width / 2;
   camp.stillTime = 0;
   camp.targetLightIndex = -1;
+  camp.triggerTime = defaultCampValues.triggerTime;
+  camp.driftSpeed = defaultCampValues.driftSpeed;
+  camp.slowSpeed = defaultCampValues.slowSpeed;
 }
 
 function resetGame() {
@@ -636,11 +998,16 @@ function resetGame() {
   game.score = 0;
   game.gameOverFade = 0;
   audioState.lastAlertAt = 0;
+  game.difficultyLevel = 1;
+  game.currentTier = difficultyTiers[0];
+  game.latestUnlockedTitles = [];
 
   player.x = canvas.width / 2 - player.width / 2;
+  resetPlayerPenalty();
   resetLights();
   resetSmoke();
   resetCamp();
+  applyDifficultyTier(0);
   stopBgm();
 
   syncMessageByState();
@@ -663,11 +1030,16 @@ function startGame() {
   game.score = 0;
   game.gameOverFade = 0;
   audioState.lastAlertAt = 0;
+  game.difficultyLevel = 1;
+  game.currentTier = difficultyTiers[0];
+  game.latestUnlockedTitles = [];
 
   player.x = canvas.width / 2 - player.width / 2;
+  resetPlayerPenalty();
   resetLights();
   resetSmoke();
   resetCamp();
+  applyDifficultyTier(0);
 
   hideMessage();
   updateHud();
@@ -702,6 +1074,7 @@ function resumeGame() {
 }
 
 function endGame() {
+  resolveProgress();
   game.state = "gameover";
   pauseBgm();
   syncMessageByState();
@@ -723,7 +1096,7 @@ function syncMessageByState() {
   if (game.state === "gameover") {
     setMessage(
       t("message_gameover_title"),
-      t("message_gameover_text", { score: formatScore(game.score) })
+      buildGameOverMessage()
     );
   }
 }
@@ -762,15 +1135,30 @@ function updateToggleButton() {
 }
 
 function updateHud() {
+  const chargeText = `${smoke.charges}/${smoke.maxCharges}`;
   const smokeLabel = smoke.active
-    ? t("smoke_active", { time: smoke.activeTime.toFixed(1) })
-    : smoke.cooldownLeft > 0
-      ? t("smoke_cooldown", { time: smoke.cooldownLeft.toFixed(1) })
-      : t("smoke_ready");
+    ? t("smoke_active", {
+        time: smoke.activeTime.toFixed(1),
+        charges: chargeText,
+      })
+    : smoke.charges < smoke.maxCharges
+      ? t("smoke_cooldown", {
+          time: smoke.rechargeTimer.toFixed(1),
+          charges: chargeText,
+        })
+      : t("smoke_ready", { charges: chargeText });
+  const canUseSmoke = !smoke.active && smoke.charges > 0;
+  const smokeButtonLabel = canUseSmoke
+    ? t("smoke_button_ready", { charges: chargeText })
+    : t("smoke_button_waiting", { charges: chargeText });
 
   scoreEl.textContent = formatScore(game.score);
   smokeStatusEl.textContent = smokeLabel;
   exposureFillEl.style.width = `${(game.exposure / game.maxExposure) * 100}%`;
+  if (smokeButton) {
+    smokeButton.textContent = smokeButtonLabel;
+    smokeButton.classList.toggle("is-ready", canUseSmoke);
+  }
   updateToggleButton();
   updateSharePanel();
 }
@@ -850,7 +1238,7 @@ function useSmoke() {
     return;
   }
 
-  if (smoke.active || smoke.cooldownLeft > 0) {
+  if (smoke.active || smoke.charges <= 0) {
     return;
   }
 
@@ -860,21 +1248,13 @@ function useSmoke() {
 
   smoke.active = true;
   smoke.activeTime = smoke.duration;
-  smoke.cooldownLeft = smoke.cooldown;
+  smoke.charges -= 1;
+
+  if (smoke.charges < smoke.maxCharges && smoke.rechargeTimer <= 0) {
+    smoke.rechargeTimer = smoke.cooldown;
+  }
   updateHud();
   playSound("smoke");
-}
-
-function addLightIfNeeded() {
-  if (game.time < 12 || lights.length >= 3) {
-    return;
-  }
-
-  if (lights.length === 1) {
-    lights.push(createSpawnedLight(randomChoice(lightSpawnConfigs.second)));
-  } else if (game.time > 32 && lights.length === 2) {
-    lights.push(createSpawnedLight(randomChoice(lightSpawnConfigs.third)));
-  }
 }
 
 function getPlayerCenterX() {
@@ -916,32 +1296,37 @@ function updateCamp(deltaTime) {
 
 function updateLights(deltaTime) {
   const playerCenterX = getPlayerCenterX();
+  const tier = game.currentTier;
 
   lights.forEach((light, index) => {
-    if (game.time > 8) {
-      const speedTime = Math.min(game.time, 180);
-      const baseSpeed = light.baseSpeed + index * 24 + speedTime * 1.1;
+    const variance = light.speedVariance * tier.speedVarianceMultiplier;
+    const baseSpeed = (light.baseSpeed + index * 24) * tier.speedMultiplier;
 
-      if (game.time >= light.nextSpeedChangeAt) {
-        light.speedChangeInterval = randomBetween(5, 10);
-        light.nextSpeedChangeAt = game.time + light.speedChangeInterval;
-        light.targetSpeedOffset = randomBetween(
-          -light.speedVariance,
-          light.speedVariance
-        );
-      }
-
-      const speedStep = 20 * deltaTime;
-      const offsetDelta = light.targetSpeedOffset - light.speedOffset;
-
-      if (Math.abs(offsetDelta) <= speedStep) {
-        light.speedOffset = light.targetSpeedOffset;
-      } else {
-        light.speedOffset += Math.sign(offsetDelta) * speedStep;
-      }
-
-      light.speed = baseSpeed + light.speedOffset;
+    if (game.time >= light.nextSpeedChangeAt) {
+      light.speedChangeInterval = randomBetween(5, 10);
+      light.nextSpeedChangeAt = game.time + light.speedChangeInterval;
+      light.targetSpeedOffset = randomBetween(-variance, variance);
     }
+
+    const speedStep = 20 * deltaTime;
+    const offsetDelta = light.targetSpeedOffset - light.speedOffset;
+
+    if (Math.abs(offsetDelta) <= speedStep) {
+      light.speedOffset = light.targetSpeedOffset;
+    } else {
+      light.speedOffset += Math.sign(offsetDelta) * speedStep;
+    }
+
+    maybeTriggerFeint(light, tier, playerCenterX);
+    maybeTriggerPassPenalty(light, playerCenterX, deltaTime);
+
+    if (light.feintTimer > 0) {
+      light.feintTimer = Math.max(0, light.feintTimer - deltaTime);
+    } else {
+      light.feintSlowMultiplier = 1;
+    }
+
+    light.speed = (baseSpeed + light.speedOffset) * light.feintSlowMultiplier;
 
     if (index === camp.targetLightIndex) {
       const deltaX = playerCenterX - light.x;
@@ -980,9 +1365,17 @@ function updateSmoke(deltaTime) {
     }
   }
 
-  if (smoke.cooldownLeft > 0) {
-    smoke.cooldownLeft -= deltaTime;
-    smoke.cooldownLeft = Math.max(smoke.cooldownLeft, 0);
+  if (smoke.charges >= smoke.maxCharges) {
+    smoke.rechargeTimer = 0;
+    return;
+  }
+
+  smoke.rechargeTimer -= deltaTime;
+
+  if (smoke.rechargeTimer <= 0) {
+    smoke.charges = Math.min(smoke.maxCharges, smoke.charges + 1);
+    smoke.rechargeTimer =
+      smoke.charges < smoke.maxCharges ? smoke.cooldown : 0;
   }
 }
 
@@ -997,7 +1390,8 @@ function updatePlayer(deltaTime) {
     move += 1;
   }
 
-  player.x += move * player.speed * deltaTime;
+  updatePlayerPenalty(deltaTime);
+  player.x += move * player.speed * player.speedPenaltyMultiplier * deltaTime;
   player.x = clamp(player.x, 24, canvas.width - player.width - 24);
 }
 
@@ -1006,18 +1400,18 @@ function updateExposure(deltaTime) {
   const inLight = hitCount > 0;
   const hidden = inLight && isPlayerHidden();
 
-  let recovery = 18;
+  let recovery = 15;
 
   if (hidden) {
-    recovery = 42;
+    recovery = 36;
 
     if (game.exposure >= 60) {
-      recovery = 52;
+      recovery = 44;
     }
   }
 
   if (smoke.active) {
-    game.exposure -= 58 * deltaTime;
+    game.exposure -= 52 * deltaTime;
   } else if (inLight && !hidden) {
     const exposureRate = 30 + Math.max(0, hitCount - 1) * 12;
     game.exposure += exposureRate * deltaTime;
@@ -1044,12 +1438,12 @@ function update(deltaTime) {
 
   game.time += deltaTime;
   game.score = game.time;
+  applyDifficultyTier(game.time);
 
   updatePlayer(deltaTime);
   updateCamp(deltaTime);
   updateLights(deltaTime);
   updateSmoke(deltaTime);
-  addLightIfNeeded();
   updateExposure(deltaTime);
   maybePlayAlert();
   updateHud();
@@ -1353,7 +1747,23 @@ if (shareXButton) {
   });
 }
 
+[
+  ...controlButtons,
+  ...localeButtons,
+  ...soundButtons,
+  ...soundChoiceButtons,
+  shareCopyButton,
+  shareXButton,
+]
+  .filter(Boolean)
+  .forEach((element) => {
+    element.addEventListener("contextmenu", (event) => {
+      event.preventDefault();
+    });
+  });
+
 resetGame();
+loadProgress();
 setLocale("ja");
 setSoundEnabled(true);
 showSoundModal();

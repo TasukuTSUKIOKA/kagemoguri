@@ -93,6 +93,9 @@ body::before {
   font: inherit;
   font-size: 0.82rem;
   cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .sound-modal-button:active {
@@ -137,6 +140,9 @@ body::before {
   font: inherit;
   font-size: 0.68rem;
   cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .sound-button.is-active {
@@ -159,6 +165,9 @@ body::before {
   font: inherit;
   font-size: 0.72rem;
   cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .locale-button.is-active {
@@ -362,6 +371,9 @@ body::before {
   font-size: 0.74rem;
   text-decoration: none;
   cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .share-action:active {
@@ -380,6 +392,20 @@ body::before {
   font-size: 0.82rem;
   cursor: pointer;
   touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.control-button.is-ready {
+  border-color: rgba(255, 255, 255, 0.72);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.14) inset,
+    0 0 16px rgba(255, 255, 255, 0.24);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.06)),
+    rgba(18, 18, 18, 0.96);
+  color: #ffffff;
 }
 
 .control-button:active {
