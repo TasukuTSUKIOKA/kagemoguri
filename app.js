@@ -603,18 +603,37 @@ function formatScore(value) {
   return `${score} ${t("score_unit")}`;
 }
 
+function getShareTitleSummary() {
+  const reachedLevel = getReachedLevel(game.score);
+  const highestLevel = Math.max(reachedLevel, game.progress.unlockedLevel);
+
+  return {
+    currentTitle: reachedLevel > 0 ? getTitleByLevel(reachedLevel) : t("title_rank_none"),
+    highestTitle: highestLevel > 0 ? getTitleByLevel(highestLevel) : t("title_rank_none"),
+  };
+}
+
 function buildShareText() {
-  return `『影もぐり』v${GAME_VERSION} ${t("share_text", {
-    score: formatScore(game.score),
-  })}`;
+  const { currentTitle, highestTitle } = getShareTitleSummary();
+
+  return [
+    `『影もぐり』v${GAME_VERSION} ${t("share_text", {
+      score: formatScore(game.score),
+    })}`,
+    `今回の称号: ${currentTitle}`,
+    `現在の最高称号: ${highestTitle}`,
+  ].join("\n");
 }
 
 function buildSharePayload() {
-  const shareText = `${buildShareText()}\n${window.location.href}`;
-  const xText = `${buildShareText()}\n#影もぐり @TasukuTSUKIOKA`;
+  const shareBody = buildShareText();
+  const previewText = shareBody;
+  const copyText = `${shareBody}\n${window.location.href}`;
+  const xText = `${shareBody}\n#影もぐり @TasukuTSUKIOKA`;
 
   return {
-    text: shareText,
+    previewText,
+    copyText,
     xText,
     url: window.location.href,
   };
@@ -659,7 +678,7 @@ function updateSharePanel() {
   }
 
   const payload = buildSharePayload();
-  sharePreview.textContent = payload.text;
+  sharePreview.textContent = payload.previewText;
   setShareFeedback();
   shareXButton.textContent = t("share_x");
   shareCopyButton.textContent = t("share_copy");
@@ -675,7 +694,7 @@ async function handleCopyShare() {
   const payload = buildSharePayload();
   if (navigator.clipboard?.writeText) {
     try {
-      await navigator.clipboard.writeText(payload.text);
+      await navigator.clipboard.writeText(payload.copyText);
       const copiedText = t("share_copied");
       smokeStatusEl.textContent = copiedText;
       setShareFeedback(copiedText);
@@ -683,7 +702,7 @@ async function handleCopyShare() {
     } catch {}
   }
 
-  window.prompt("Copy this text", payload.text);
+  window.prompt("Copy this text", payload.copyText);
 }
 
 function setLocale(locale) {
