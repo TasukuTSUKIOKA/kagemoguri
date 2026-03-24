@@ -21,7 +21,7 @@ const soundChoiceButtons = document.querySelectorAll("[data-sound-choice]");
 const soundModalEl = document.getElementById("sound-modal");
 const i18nNodes = document.querySelectorAll("[data-i18n]");
 
-const GAME_VERSION = "2.0.0";
+const GAME_VERSION = "2.1.0";
 const PROGRESS_STORAGE_KEY = "kagemoguri_progress_v1";
 const TITLE_LEVEL_MAX = 10;
 
@@ -48,6 +48,7 @@ const difficultyTiers = [
     campTriggerTime: 2.4,
     campDriftSpeed: 90,
     campSlowSpeed: 26,
+    smokeCooldown: 15,
   },
   {
     level: 2,
@@ -58,6 +59,7 @@ const difficultyTiers = [
     campTriggerTime: 2.4,
     campDriftSpeed: 90,
     campSlowSpeed: 26,
+    smokeCooldown: 15,
   },
   {
     level: 3,
@@ -68,6 +70,7 @@ const difficultyTiers = [
     campTriggerTime: 2.4,
     campDriftSpeed: 90,
     campSlowSpeed: 27,
+    smokeCooldown: 14,
   },
   {
     level: 4,
@@ -78,6 +81,7 @@ const difficultyTiers = [
     campTriggerTime: 2.4,
     campDriftSpeed: 90,
     campSlowSpeed: 27,
+    smokeCooldown: 14,
   },
   {
     level: 5,
@@ -88,6 +92,7 @@ const difficultyTiers = [
     campTriggerTime: 1.95,
     campDriftSpeed: 106,
     campSlowSpeed: 26,
+    smokeCooldown: 13,
   },
   {
     level: 6,
@@ -98,6 +103,7 @@ const difficultyTiers = [
     campTriggerTime: 1.82,
     campDriftSpeed: 110,
     campSlowSpeed: 26,
+    smokeCooldown: 13,
   },
   {
     level: 7,
@@ -108,36 +114,40 @@ const difficultyTiers = [
     campTriggerTime: 1.68,
     campDriftSpeed: 114,
     campSlowSpeed: 25,
+    smokeCooldown: 12,
   },
   {
     level: 8,
-    lightCount: 4,
+    lightCount: 3,
     speedMultiplier: 1.28,
-    feintChance: 0.74,
+    feintChance: 0.82,
     speedVarianceMultiplier: 1.22,
     campTriggerTime: 1.54,
     campDriftSpeed: 118,
     campSlowSpeed: 25,
+    smokeCooldown: 12,
   },
   {
     level: 9,
-    lightCount: 4,
+    lightCount: 3,
     speedMultiplier: 1.31,
-    feintChance: 0.84,
+    feintChance: 0.9,
     speedVarianceMultiplier: 1.28,
     campTriggerTime: 1.44,
     campDriftSpeed: 122,
     campSlowSpeed: 24,
+    smokeCooldown: 11,
   },
   {
     level: 10,
-    lightCount: 4,
+    lightCount: 3,
     speedMultiplier: 1.34,
-    feintChance: 0.92,
+    feintChance: 0.96,
     speedVarianceMultiplier: 1.34,
     campTriggerTime: 1.34,
     campDriftSpeed: 126,
     campSlowSpeed: 24,
+    smokeCooldown: 11,
   },
 ];
 
@@ -256,10 +266,27 @@ const smoke = {
   active: false,
   activeTime: 0,
   duration: 2.5,
-  cooldown: 18,
+  cooldown: 15,
   maxCharges: 2,
   charges: 2,
   rechargeTimer: 0,
+};
+
+const dodgeBonus = {
+  activeTime: 0,
+  duration: 0.8,
+  recoveryBoost: 12,
+  cooldown: 1.5,
+  cooldownTimer: 0,
+};
+
+const escapeState = {
+  active: false,
+  movedDistance: 0,
+  safeTime: 0,
+  activeTime: 0,
+  lastPlayerX: 0,
+  highExposureStart: false,
 };
 
 const player = {
@@ -875,6 +902,7 @@ function applyDifficultyTier(seconds = game.time) {
   camp.triggerTime = tier.campTriggerTime;
   camp.driftSpeed = tier.campDriftSpeed;
   camp.slowSpeed = tier.campSlowSpeed;
+  smoke.cooldown = tier.smokeCooldown;
   syncLightsWithTier(tier);
 }
 
@@ -896,15 +924,110 @@ function maybeTriggerFeint(light, tier, playerCenterX) {
   }
 
   light.feintTimer = randomBetween(0.3, 0.7);
-  light.feintSlowMultiplier = randomBetween(0.45, 0.7);
+  const minSlow = tier.level >= 8 ? 0.38 : 0.45;
+  const maxSlow = tier.level >= 8 ? 0.62 : 0.7;
+  light.feintSlowMultiplier = randomBetween(minSlow, maxSlow);
 }
 
 function triggerPassPenalty() {
-  const damage = player.speedPenaltyTimer > 0 ? 4 : 12;
+  const damage = player.speedPenaltyTimer > 0 ? 2 : 6;
 
-  player.speedPenaltyTimer = 0.9;
-  player.speedPenaltyMultiplier = 0.6;
+  player.speedPenaltyTimer = 0.6;
+  player.speedPenaltyMultiplier = 0.75;
   game.exposure = clamp(game.exposure + damage, 0, game.maxExposure);
+}
+
+function activateDodgeBonus(duration, recoveryBoost) {
+  dodgeBonus.activeTime = duration;
+  dodgeBonus.recoveryBoost = recoveryBoost;
+  dodgeBonus.cooldownTimer = dodgeBonus.cooldown;
+}
+
+function resetEscapeState() {
+  escapeState.active = false;
+  escapeState.movedDistance = 0;
+  escapeState.safeTime = 0;
+  escapeState.activeTime = 0;
+  escapeState.lastPlayerX = player.x;
+  escapeState.highExposureStart = false;
+}
+
+function getNearestLightDistance() {
+  const playerCenterX = getPlayerCenterX();
+  let nearestDistance = Infinity;
+
+  lights.forEach((light) => {
+    nearestDistance = Math.min(nearestDistance, Math.abs(light.x - playerCenterX));
+  });
+
+  return nearestDistance;
+}
+
+function updateDodgeBonus(deltaTime, inDanger) {
+  if (dodgeBonus.cooldownTimer > 0) {
+    dodgeBonus.cooldownTimer = Math.max(0, dodgeBonus.cooldownTimer - deltaTime);
+  }
+
+  if (inDanger) {
+    dodgeBonus.activeTime = 0;
+  }
+
+  if (dodgeBonus.activeTime > 0) {
+    dodgeBonus.activeTime = Math.max(0, dodgeBonus.activeTime - deltaTime);
+  }
+}
+
+function updateEscapeState(deltaTime, inLight, hidden) {
+  const nearestLightDistance = getNearestLightDistance();
+  const inDanger = (inLight && !hidden) || nearestLightDistance <= 72;
+  const inSafeZone = hidden || nearestLightDistance >= 132;
+  const movedDistance = Math.abs(player.x - escapeState.lastPlayerX);
+
+  escapeState.lastPlayerX = player.x;
+  updateDodgeBonus(deltaTime, inDanger);
+
+  if (!escapeState.active) {
+    if (dodgeBonus.cooldownTimer <= 0 && inDanger) {
+      escapeState.active = true;
+      escapeState.movedDistance = 0;
+      escapeState.safeTime = 0;
+      escapeState.activeTime = 0;
+      escapeState.highExposureStart = game.exposure >= 75;
+    }
+
+    return;
+  }
+
+  escapeState.activeTime += deltaTime;
+  escapeState.movedDistance += movedDistance;
+
+  if (inDanger) {
+    escapeState.safeTime = 0;
+  } else {
+    escapeState.safeTime += deltaTime;
+  }
+
+  if (
+    escapeState.movedDistance >= 64 &&
+    escapeState.safeTime >= 0.22 &&
+    inSafeZone
+  ) {
+    const bonusDuration = hidden ? 0.9 : 0.7;
+    const recoveryBoost = hidden ? 14 : 12;
+
+    activateDodgeBonus(bonusDuration, recoveryBoost);
+
+    if (escapeState.highExposureStart) {
+      game.exposure = clamp(game.exposure - 10, 0, game.maxExposure);
+    }
+
+    resetEscapeState();
+    return;
+  }
+
+  if (escapeState.activeTime >= 4.5 || escapeState.safeTime >= 1.2) {
+    resetEscapeState();
+  }
 }
 
 function updatePlayerPenalty(deltaTime) {
@@ -927,9 +1050,13 @@ function maybeTriggerPassPenalty(light, playerCenterX, deltaTime) {
   const wasApproaching = Math.sign(previousDeltaX) === light.direction;
   const crossed = previousDeltaX !== 0 && Math.sign(previousDeltaX) !== Math.sign(deltaX);
   const nearLight = Math.abs(deltaX) <= 54 || Math.abs(previousDeltaX) <= 54;
+  const inLight = isPlayerInLightForLight(light);
 
   if (wasApproaching && crossed && nearLight && light.passPenaltyCooldown <= 0) {
-    triggerPassPenalty();
+    if (inLight && !isPlayerHidden()) {
+      triggerPassPenalty();
+    }
+
     light.passPenaltyCooldown = 0.75;
   }
 
@@ -1020,12 +1147,16 @@ function resetGame() {
   game.difficultyLevel = 1;
   game.currentTier = difficultyTiers[0];
   game.latestUnlockedTitles = [];
+  dodgeBonus.activeTime = 0;
+  dodgeBonus.cooldownTimer = 0;
+  dodgeBonus.recoveryBoost = 12;
 
   player.x = canvas.width / 2 - player.width / 2;
   resetPlayerPenalty();
   resetLights();
   resetSmoke();
   resetCamp();
+  resetEscapeState();
   applyDifficultyTier(0);
   stopBgm();
 
@@ -1052,12 +1183,16 @@ function startGame() {
   game.difficultyLevel = 1;
   game.currentTier = difficultyTiers[0];
   game.latestUnlockedTitles = [];
+  dodgeBonus.activeTime = 0;
+  dodgeBonus.cooldownTimer = 0;
+  dodgeBonus.recoveryBoost = 12;
 
   player.x = canvas.width / 2 - player.width / 2;
   resetPlayerPenalty();
   resetLights();
   resetSmoke();
   resetCamp();
+  resetEscapeState();
   applyDifficultyTier(0);
 
   hideMessage();
@@ -1418,21 +1553,26 @@ function updateExposure(deltaTime) {
   const hitCount = getLightHitCount();
   const inLight = hitCount > 0;
   const hidden = inLight && isPlayerHidden();
+  updateEscapeState(deltaTime, inLight, hidden);
 
   let recovery = 15;
 
   if (hidden) {
-    recovery = 36;
+    recovery = 42;
 
     if (game.exposure >= 60) {
-      recovery = 44;
+      recovery = 52;
     }
+  }
+
+  if (dodgeBonus.activeTime > 0) {
+    recovery += dodgeBonus.recoveryBoost;
   }
 
   if (smoke.active) {
     game.exposure -= 52 * deltaTime;
   } else if (inLight && !hidden) {
-    const exposureRate = 30 + Math.max(0, hitCount - 1) * 12;
+    const exposureRate = 30 + Math.max(0, hitCount - 1) * 6;
     game.exposure += exposureRate * deltaTime;
   } else {
     game.exposure -= recovery * deltaTime;
